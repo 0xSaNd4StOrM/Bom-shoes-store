@@ -1,0 +1,303 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 0 0% 8%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 8% 96%;
+    --secondary-foreground: 0 0% 8%;
+    --muted: 30 8% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 38 60% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 38 60% 50%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  body.font-arabic {
+    font-family: 'Cairo', 'Noto Naskh Arabic', 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  body.font-arabic h1,
+  body.font-arabic h2,
+  body.font-arabic h3,
+  body.font-arabic h4,
+  body.font-arabic h5,
+  body.font-arabic h6 {
+    font-family: 'Reem Kufi', 'Amiri', 'Cairo', serif;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.4;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  }
+  .font-sans {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  body.font-arabic .font-display {
+    font-family: 'Reem Kufi', 'Amiri', 'Cairo', serif;
+  }
+
+  .text-zen {
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    font-weight: 400;
+  }
+
+  body.font-arabic .text-zen {
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 0.85rem;
+    font-weight: 400;
+  }
+
+  .img-zoom img {
+    transition: transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .img-zoom:hover img {
+    transform: scale(1.05);
+  }
+
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { scrollbar-width: none; }
+
+  /* Gold gradient text */
+  .text-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #F1D27A 50%, #B8860B 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* Text stroke / shadow for white text on imagery
+     Adds a layered dark drop-shadow so light text stays readable
+     when it overlaps product photos with bright or mid-tone pixels. */
+  .text-shadow-sm {
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.55),
+      0 0 6px rgba(0, 0, 0, 0.35);
+  }
+  .text-shadow {
+    text-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.7),
+      0 2px 8px rgba(0, 0, 0, 0.45),
+      0 0 14px rgba(0, 0, 0, 0.25);
+  }
+  .text-shadow-lg {
+    text-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.8),
+      0 4px 12px rgba(0, 0, 0, 0.55),
+      0 0 20px rgba(0, 0, 0, 0.35);
+  }
+  /* Crisp 1px outline-style stroke using two-direction shadows (no native text-stroke) */
+  .text-stroke {
+    text-shadow:
+      -1px -1px 0 rgba(0, 0, 0, 0.85),
+       1px -1px 0 rgba(0, 0, 0, 0.85),
+      -1px  1px 0 rgba(0, 0, 0, 0.85),
+       1px  1px 0 rgba(0, 0, 0, 0.85),
+       0 2px 6px rgba(0, 0, 0, 0.45);
+  }
+  /* Gold/light outline for dark text on bright backgrounds */
+  .text-stroke-light {
+    text-shadow:
+      -1px -1px 0 rgba(255, 255, 255, 0.9),
+       1px -1px 0 rgba(255, 255, 255, 0.9),
+      -1px  1px 0 rgba(255, 255, 255, 0.9),
+       1px  1px 0 rgba(255, 255, 255, 0.9);
+  }
+}
+
+/* === ANIMATIONS === */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 800ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fade-up-2 { animation-delay: 100ms; }
+.fade-up-3 { animation-delay: 200ms; }
+.fade-up-4 { animation-delay: 300ms; }
+.fade-up-5 { animation-delay: 400ms; }
+.fade-up-6 { animation-delay: 500ms; }
+.fade-up-7 { animation-delay: 600ms; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in { animation: fadeIn 800ms ease both; }
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.slide-in-left { animation: slideInLeft 800ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.slide-in-right { animation: slideInRight 800ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+.scale-in { animation: scaleIn 700ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-16px) rotate(2deg); }
+}
+.float-anim { animation: float 6s ease-in-out infinite; }
+
+@keyframes pulseRing {
+  0% { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45), 0 0 0 0 rgba(37, 211, 102, 0.5); }
+  70% { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45), 0 0 0 18px rgba(37, 211, 102, 0); }
+  100% { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45), 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background-size: 1000px 100%;
+  animation: shimmer 3s infinite linear;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin-slow { animation: spinSlow 20s linear infinite; }
+
+@keyframes rotateGlobe {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+/* Reveal on scroll - using IntersectionObserver classes */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 900ms cubic-bezier(0.16, 1, 0.3, 1), transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 1000ms cubic-bezier(0.16, 1, 0.3, 1), transform 1000ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-scale.is-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.reveal-rotate {
+  opacity: 0;
+  transform: rotateY(45deg) translateY(40px);
+  transition: opacity 1000ms cubic-bezier(0.16, 1, 0.3, 1), transform 1000ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+.reveal-rotate.is-visible {
+  opacity: 1;
+  transform: rotateY(0deg) translateY(0);
+}
+
+.reveal-3d {
+  opacity: 0;
+  transform: perspective(1000px) rotateX(20deg) translateZ(-100px);
+  transition: opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1), transform 1200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-3d.is-visible {
+  opacity: 1;
+  transform: perspective(1000px) rotateX(0) translateZ(0);
+}
+
+/* Card hover 3D */
+.hover-3d {
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 500ms;
+  transform-style: preserve-3d;
+}
+.hover-3d:hover {
+  transform: translateY(-8px) rotateX(2deg) rotateY(-2deg) scale(1.02);
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,0.15);
+}
+
+img { object-position: center; }
+
+/* RTL utility */
+[dir="rtl"] .flip-rtl { transform: scaleX(-1); }
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal, .reveal-scale, .reveal-rotate, .reveal-3d {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
