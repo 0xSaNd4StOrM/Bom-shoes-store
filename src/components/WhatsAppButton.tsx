@@ -7,8 +7,8 @@ import { useLanguage } from '@/contexts/LanguageContext'
  * Replace WHATSAPP_NUMBER with the actual store number.
  */
 const WHATSAPP_NUMBER = '+201234567890'
-const WHATSAPP_MESSAGE_EN = 'Hello Mashwar, I would like to ask about your shoes.'
-const WHATSAPP_MESSAGE_AR = 'مرحبًا مَشْوار، أرغب في الاستفسار عن أحذيتكم.'
+const WHATSAPP_MESSAGE_EN = 'Hello BOM Store, I would like to ask about your shoes.'
+const WHATSAPP_MESSAGE_AR = 'مرحبا BOM Store، أرغب في الاستفسار عن أحذيتكم.'
 
 export default function WhatsAppButton() {
   const { lang } = useLanguage()

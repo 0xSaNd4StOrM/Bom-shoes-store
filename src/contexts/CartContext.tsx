@@ -16,11 +16,14 @@ type CartContextType = {
   clearCart: () => void
   totalItems: number
   totalPrice: number
+  couponCode: string | null
+  setCouponCode: (code: string | null) => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 const CART_KEY = 'zen-shoes-cart'
+const COUPON_KEY = 'zen-shoes-coupon'
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -32,9 +35,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   })
 
+  const [couponCode, setCouponCode] = useState<string | null>(() => {
+    try {
+      const stored = localStorage.getItem(COUPON_KEY)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
+
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(items))
   }, [items])
+
+  useEffect(() => {
+    localStorage.setItem(COUPON_KEY, JSON.stringify(couponCode))
+  }, [couponCode])
 
   function addItem(product: Product, size: string, color: string, quantity = 1) {
     setItems(current => {
@@ -70,6 +86,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function clearCart() {
     setItems([])
+    setCouponCode(null)
   }
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
@@ -84,6 +101,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clearCart,
       totalItems,
       totalPrice,
+      couponCode,
+      setCouponCode,
     }}>
       {children}
     </CartContext.Provider>

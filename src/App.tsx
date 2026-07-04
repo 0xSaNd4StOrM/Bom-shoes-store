@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import { supabase } from './lib/supabase'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import Shop from './pages/Shop'
@@ -10,13 +12,42 @@ import CheckoutFailed from './pages/CheckoutFailed'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Account from './pages/Account'
+import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminOrders from './pages/admin/AdminOrders'
+import AdminCoupons from './pages/admin/AdminCoupons'
+import AdminBundles from './pages/admin/AdminBundles'
+import AdminBanners from './pages/admin/AdminBanners'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminActivityLog from './pages/admin/AdminActivityLog'
+import AdminSettings from './pages/admin/AdminSettings'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useT } from './contexts/LanguageContext'
 
+// Singleton row id -- see supabase/migrations/20260704008000_store_settings_realtime.sql.
+const STORE_SETTINGS_ID = '00000000-0000-0000-0000-000000000001'
+
 function App() {
+  // One-time check for an admin-uploaded favicon. Leaves index.html's static
+  // /favicon.svg <link> completely untouched when there's no favicon_url set,
+  // the row is missing, or the table is unreachable.
+  useEffect(() => {
+    supabase
+      .from('store_settings')
+      .select('favicon_url')
+      .eq('id', STORE_SETTINGS_ID)
+      .maybeSingle()
+      .then(
+        ({ data }) => {
+          if (!data?.favicon_url) return
+          const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+          if (link) link.href = data.favicon_url
+        },
+        () => {} // ponytail: unreachable table -> static favicon stays as-is
+      )
+  }, [])
+
   return (
     <Routes>
       <Route element={<Layout />}>
@@ -30,9 +61,17 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
-        <Route path="/admin/products" element={<ProtectedRoute requireAdmin><AdminProducts /></ProtectedRoute>} />
-        <Route path="/admin/orders" element={<ProtectedRoute requireAdmin><AdminOrders /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="bundles" element={<AdminBundles />} />
+          <Route path="banners" element={<AdminBanners />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="activity" element={<AdminActivityLog />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

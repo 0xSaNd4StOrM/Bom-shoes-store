@@ -1,10 +1,13 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { useT } from '@/contexts/LanguageContext'
+import { useSeo } from '@/hooks/useSeo'
 
 export default function CheckoutFailed() {
   const [params] = useSearchParams()
   const orderId = params.get('orderId') || ''
   const t = useT()
+
+  useSeo({ title: `${t.failedTitle} — ${t.brandName}`, description: t.failedDesc })
 
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 text-center">

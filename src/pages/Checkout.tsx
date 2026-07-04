@@ -1,20 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT, useLanguage } from '@/contexts/LanguageContext'
 import { supabase } from '@/lib/supabase'
-import { initiateKashierPayment } from '@/lib/kashier'
+import type { CreateOrderRequest, CreateOrderResponse } from '@/lib/kashier'
 import { ArrowLeft, CreditCard, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
+import { useSeo } from '@/hooks/useSeo'
 
 export default function Checkout() {
-  const { items, totalPrice, clearCart } = useCart()
+  const { items, totalPrice, clearCart, couponCode } = useCart()
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const t = useT()
   const { lang } = useLanguage()
+
+  useSeo({ title: `${t.checkoutShipping} — ${t.brandName}`, description: t.checkoutPaymentDesc })
+
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
     fullName: profile?.full_name || '',
@@ -25,10 +29,35 @@ export default function Checkout() {
     country: lang === 'ar' ? 'مصر' : 'Egypt',
     notes: '',
   })
+  const [discountAmount, setDiscountAmount] = useState(0)
+  const [freeShipping, setFreeShipping] = useState(false)
 
-  const shipping = totalPrice > 200 ? 0 : 15
+  // Live preview of the coupon carried over from the Cart page, so the
+  // summary/total shown here isn't missing the discount the whole time the
+  // user is filling out the form -- recomputed once (items don't change on
+  // this page). The authoritative number always comes back from create-order
+  // at submit time below, which overwrites this if it differs.
+  useEffect(() => {
+    if (!couponCode) { setDiscountAmount(0); setFreeShipping(false); return }
+    let cancelled = false
+    supabase.functions.invoke('validate-coupon', {
+      body: {
+        code: couponCode,
+        items: items.map(i => ({ product_id: i.product.id, size: i.size, color: i.color, quantity: i.quantity })),
+        customerEmail: form.email || user?.email,
+      },
+    }).then(({ data }) => {
+      if (cancelled) return
+      setDiscountAmount(data?.valid ? data.discountAmount : 0)
+      setFreeShipping(!!data?.valid && !!data?.freeShipping)
+    }).catch(() => { if (!cancelled) { setDiscountAmount(0); setFreeShipping(false) } })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [couponCode])
+
+  const shipping = freeShipping ? 0 : totalPrice > 200 ? 0 : 15
   const tax = totalPrice * 0.08
-  const grand = totalPrice + shipping + tax
+  const grand = totalPrice + shipping + tax - discountAmount
 
   function setField(k: keyof typeof form, v: string) {
     setForm(f => ({ ...f, [k]: v }))
@@ -45,61 +74,43 @@ export default function Checkout() {
     setSubmitting(true)
 
     try {
-      // Create the order in Supabase
-      const orderId = `MASHWAR-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-      const orderItems = items.map(i => ({
-        product_id: i.product.id,
-        name: i.product.name,
-        size: i.size,
-        color: i.color,
-        quantity: i.quantity,
-        price: i.product.price,
-        image_url: i.product.image_url,
-      }))
-
-      const { data: order, error } = await supabase.from('orders').insert({
-        user_id: user?.id || null,
-        customer_name: form.fullName,
-        customer_email: form.email,
-        customer_phone: form.phone,
-        shipping_address: `${form.address}, ${form.city}, ${form.country}${form.notes ? ' | ' + form.notes : ''}`,
-        total_amount: grand,
-        status: 'pending',
-        payment_status: 'pending',
-        payment_method: 'kashier',
-        kashier_order_id: orderId,
-        items: orderItems,
-      }).select().single()
-
-      if (error) throw error
-
-      // Update stock
-      for (const item of items) {
-        await supabase.rpc('decrement_stock', {
-          product_id: item.product.id,
-          qty: item.quantity,
-        }).then(() => {}) // ignore if RPC doesn't exist
-        // Fallback: direct update
-        await supabase
-          .from('products')
-          .update({ stock: Math.max(0, item.product.stock - item.quantity) })
-          .eq('id', item.product.id)
+      // The edge function looks up real product prices/stock server-side and
+      // computes the total itself -- it never trusts anything the client
+      // sends beyond which product/size/color/quantity was picked. The order
+      // id, order row, and Kashier checkout URL (with its signed hash) are
+      // all generated server-side too; see supabase/functions/create-order.
+      const body: CreateOrderRequest = {
+        items: items.map(i => ({
+          product_id: i.product.id,
+          size: i.size,
+          color: i.color,
+          quantity: i.quantity,
+        })),
+        customer: {
+          fullName: form.fullName,
+          email: form.email,
+          phone: form.phone,
+          address: form.address,
+          city: form.city,
+          country: form.country,
+          notes: form.notes,
+        },
+        ...(couponCode ? { couponCode } : {}),
       }
 
-      // Initiate Kashier payment
-      await initiateKashierPayment({
-        orderId: orderId,
-        amount: grand,
-        currency: 'USD',
-        customerName: form.fullName,
-        customerEmail: form.email,
-        customerPhone: form.phone,
-        description: `Mashwar order ${orderId}, ${items.length} ${items.length === 1 ? 'piece' : 'pieces'}`,
-        items: orderItems,
-      })
+      const { data, error } = await supabase.functions.invoke<CreateOrderResponse>('create-order', { body })
+
+      if (error) throw error
+      if (!data?.checkoutUrl) throw new Error('BOM Store: create-order did not return a checkout URL')
+
+      // Reconcile with what the server actually applied (it re-validates the
+      // coupon independently and may land on a different number than the
+      // preview above, e.g. it just expired).
+      setDiscountAmount(data.discountAmount ?? 0)
 
       // Note: We do NOT clear cart here because the user might return from a failed payment.
       // The cart will be cleared on the success page.
+      window.location.href = data.checkoutUrl
     } catch (err: any) {
       console.error(err)
       toast.error(t.checkoutFailed)
@@ -109,7 +120,7 @@ export default function Checkout() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center px-6 text-center">
+      <div className="min-h-screen bg-cream flex flex-col items-center justify-center px-6 text-center">
         <p className="text-zen text-muted-foreground mb-4">{t.cartEyebrow}</p>
         <Link to="/shop" className="font-display text-2xl mb-3">{t.cartEmptyTitle}</Link>
         <Link to="/shop" className="text-sm text-muted-foreground underline-offset-2 hover:underline">
@@ -128,7 +139,7 @@ export default function Checkout() {
   const fieldNotes = t.fieldNotes
 
   return (
-    <div className="px-6 lg:px-10 py-12 lg:py-16">
+    <div className="min-h-screen bg-cream px-6 lg:px-10 py-12 lg:py-16">
       <div className="max-w-[1400px] mx-auto">
         <Link
           to="/cart"
@@ -187,7 +198,7 @@ export default function Checkout() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-primary text-primary-foreground py-4 text-sm tracking-widest uppercase hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-foreground text-background py-4 text-sm tracking-widest uppercase hover:bg-foreground/85 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {submitting ? t.checkoutPreparing : (
                 <>
@@ -224,6 +235,9 @@ export default function Checkout() {
               </div>
               <dl className="space-y-2 text-sm border-t border-border pt-4">
                 <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartSubtotal}</dt><dd>${totalPrice.toFixed(0)}</dd></div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartDiscount}</dt><dd>−${discountAmount.toFixed(0)}</dd></div>
+                )}
                 <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartShipping}</dt><dd>{shipping === 0 ? t.cartFree : `$${shipping.toFixed(0)}`}</dd></div>
                 <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartTax}</dt><dd>${tax.toFixed(0)}</dd></div>
                 <div className="pt-3 border-t border-border flex justify-between items-baseline">

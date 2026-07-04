@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { AuthProvider } from './contexts/AuthContext'
 import { CartProvider } from './contexts/CartContext'
 import { LanguageProvider } from './contexts/LanguageContext'
+import { WishlistProvider } from './contexts/WishlistContext'
 import App from './App.tsx'
 import './index.css'
 
@@ -15,20 +16,22 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <LanguageProvider>
           <AuthProvider>
-            <CartProvider>
-              <App />
-              <Toaster
-                position="top-center"
-                toastOptions={{
-                  style: {
-                    background: 'hsl(var(--card))',
-                    color: 'hsl(var(--foreground))',
-                    border: '1px solid hsl(var(--border))',
-                    fontSize: '0.875rem',
-                  },
-                }}
-              />
-            </CartProvider>
+            <WishlistProvider>
+              <CartProvider>
+                <App />
+                <Toaster
+                  position="top-center"
+                  toastOptions={{
+                    style: {
+                      background: 'hsl(var(--card))',
+                      color: 'hsl(var(--foreground))',
+                      border: '1px solid hsl(var(--border))',
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                />
+              </CartProvider>
+            </WishlistProvider>
           </AuthProvider>
         </LanguageProvider>
       </BrowserRouter>

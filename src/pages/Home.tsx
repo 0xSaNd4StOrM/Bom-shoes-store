@@ -1,42 +1,158 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase, Product } from '@/lib/supabase'
+import { supabase, ProductCatalogEntry, HeroBanner } from '@/lib/supabase'
 import { useT, useLanguage } from '@/contexts/LanguageContext'
-import { ArrowRight, ArrowUpRight, Plus, Sparkles } from 'lucide-react'
+import { useCart } from '@/contexts/CartContext'
+import { ArrowRight, ArrowUpRight, Truck, ShieldCheck, RotateCcw, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import ShoeShowcase3D from '@/components/ShoeShowcase3D'
+import ProductCard from '@/components/ProductCard'
+import SectionHeading from '@/components/SectionHeading'
+import CountdownTimer from '@/components/CountdownTimer'
+import QuickViewModal from '@/components/QuickViewModal'
+import { useSeo } from '@/hooks/useSeo'
+
+// Homepage hero banner slide, sourced from the admin-managed hero_banners
+// table. Rendered instead of the hardcoded hero below when >=1 active banner
+// exists; auto-advances with a plain interval when there's more than one --
+// no carousel library, this codebase doesn't already use embla anywhere.
+function HeroBanners({ banners }: { banners: HeroBanner[] }) {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    if (banners.length < 2) return
+    const id = setInterval(() => setIndex(i => (i + 1) % banners.length), 6000)
+    return () => clearInterval(id)
+  }, [banners.length])
+
+  const banner = banners[index]
+
+  return (
+    <section className="relative min-h-[95vh] flex items-center overflow-hidden bg-background">
+      {banner.image_url && (
+        <img
+          src={banner.image_url}
+          alt={banner.title}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
+
+      <div className="relative max-w-[1400px] mx-auto px-6 lg:px-10 w-full py-20 text-background">
+        <h1 className="font-display text-6xl md:text-7xl lg:text-[7.5rem] leading-[0.95] tracking-[-0.03em] max-w-3xl fade-up fade-up-2">
+          {banner.title}
+        </h1>
+        {banner.subtitle && (
+          <p className="mt-8 text-base md:text-lg text-background/80 max-w-md font-light leading-relaxed fade-up fade-up-3">
+            {banner.subtitle}
+          </p>
+        )}
+        {banner.cta_text && banner.cta_link && (
+          <div className="mt-12 fade-up fade-up-4">
+            <Link
+              to={banner.cta_link}
+              className="group inline-flex items-center gap-3 bg-background text-foreground px-8 py-4 text-[13px] tracking-[0.2em] uppercase font-medium hover:bg-background/90 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:-translate-y-0.5"
+            >
+              {banner.cta_text}
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform flip-rtl" />
+            </Link>
+          </div>
+        )}
+        {banners.length > 1 && (
+          <div className="mt-16 flex items-center gap-2">
+            {banners.map((b, i) => (
+              <button
+                key={b.id}
+                onClick={() => setIndex(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all cursor-pointer ${i === index ? 'w-8 bg-background' : 'w-1.5 bg-background/40'}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
 
 const CATEGORIES = [
-  { key: 'Sneakers', en: 'Sneakers', ar: 'أحذية رياضية', img: '/shoes/cloudwalker.webp' },
-  { key: 'Boots', en: 'Boots', ar: 'بُوط', img: '/shoes/atlas-boot.webp' },
-  { key: 'Loafers', en: 'Loafers', ar: 'لُوفرز', img: '/shoes/atlas-loafer.webp' },
-  { key: 'Derbies', en: 'Derbies', ar: 'دَربي', img: '/shoes/marina-derby.webp' },
-  { key: 'Slippers', en: 'Slippers', ar: 'نَعال', img: '/shoes/drift-runner.webp' },
-  { key: 'Sandals', en: 'Sandals', ar: 'صَنادل', img: '/shoes/dune-boot.webp' },
+  { key: 'Sneakers', en: 'Sneakers', ar: 'أحذية رياضية' },
+  { key: 'Boots', en: 'Boots', ar: 'بوط' },
+  { key: 'Loafers', en: 'Loafers', ar: 'لوفرز' },
+  { key: 'Derbies', en: 'Derbies', ar: 'دربي' },
+  { key: 'Slippers', en: 'Slippers', ar: 'نعال' },
+  { key: 'Sandals', en: 'Sandals', ar: 'صنادل' },
 ]
 
 export default function Home() {
-  const [featured, setFeatured] = useState<Product[]>([])
-  const [all, setAll] = useState<Product[]>([])
+  const [featured, setFeatured] = useState<ProductCatalogEntry[]>([])
+  const [recent, setRecent] = useState<ProductCatalogEntry[]>([])
+  const [banners, setBanners] = useState<HeroBanner[]>([])
+  const [dropEndsAt, setDropEndsAt] = useState<Date | null>(null)
+  // ponytail: no admin-configured auto-apply promo has an end date yet --
+  // static 7-day-out placeholder so the countdown never looks broken. Swap
+  // for real campaigns via the Coupons admin dashboard.
+  const [placeholderDrop] = useState(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
+  const [quickViewId, setQuickViewId] = useState<string | null>(null)
+  const [quickAddingId, setQuickAddingId] = useState<string | null>(null)
   const t = useT()
   const { lang } = useLanguage()
+  const { addItem } = useCart()
   const revealRefs = useRef<HTMLElement[]>([])
+
+  useSeo({ title: `${t.brandName} — ${t.brandTagline}`, description: t.homeHeroSubtitle })
 
   useEffect(() => {
     async function load() {
       const { data: f } = await supabase
-        .from('products')
+        .from('product_catalog')
         .select('*')
         .eq('featured', true)
-        .limit(4)
-      const { data: a } = await supabase
-        .from('products')
+        .order('created_at', { ascending: false })
+        .limit(6)
+      const { data: r } = await supabase
+        .from('product_catalog')
         .select('*')
+        .order('created_at', { ascending: false })
         .limit(6)
       if (f) setFeatured(f)
-      if (a) setAll(a)
+      if (r) setRecent(r)
     }
     load()
+  }, [])
+
+  // Admin-managed hero banners. Zero active rows -> the hardcoded hero below
+  // renders unchanged, so the homepage never looks broken/empty just because
+  // no banners have been configured yet.
+  useEffect(() => {
+    async function loadBanners() {
+      const { data } = await supabase
+        .from('hero_banners')
+        .select('*')
+        .eq('active', true)
+        .order('position')
+      setBanners(data || [])
+    }
+    loadBanners()
+  }, [])
+
+  // Countdown target for the Limited Drop banner: the soonest-ending active
+  // auto-apply promotion, if one exists. The public RLS policy on `coupons`
+  // only ever exposes requires_code=false + active=true + discount_type=
+  // 'buy_x_get_y' rows (see supabase/migrations/20260704009001_public_bxgy_promo_read.sql)
+  // -- .eq('discount_type', ...) here just matches that boundary explicitly
+  // rather than relying on RLS to silently drop every other row.
+  useEffect(() => {
+    supabase
+      .from('coupons')
+      .select('ends_at')
+      .eq('requires_code', false)
+      .eq('active', true)
+      .eq('discount_type', 'buy_x_get_y')
+      .not('ends_at', 'is', null)
+      .order('ends_at', { ascending: true })
+      .limit(1)
+      .then(({ data }) => setDropEndsAt(data?.[0]?.ends_at ? new Date(data[0].ends_at) : null))
   }, [])
 
   // IntersectionObserver for reveal animations
@@ -53,7 +169,7 @@ export default function Home() {
     )
     revealRefs.current.forEach((el) => el && observer.observe(el))
     return () => observer.disconnect()
-  }, [featured, all])
+  }, [featured, recent])
 
   const addRevealRef = (el: HTMLElement | null) => {
     if (el && !revealRefs.current.includes(el)) {
@@ -61,23 +177,68 @@ export default function Home() {
     }
   }
 
+  function categoryLabel(c: string): string {
+    switch (c) {
+      case 'Sneakers': return t.navSneakers
+      case 'Boots': return t.navBoots
+      case 'Loafers': return t.navLoafers
+      case 'Derbies': return t.navDerbies
+      case 'Slippers': return t.navSlippers
+      case 'Sandals': return t.navSandals
+      default: return c
+    }
+  }
+
+  // Same quick-add flow as Shop.tsx: grab any in-stock variant and add one.
+  async function quickAdd(p: ProductCatalogEntry, e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setQuickAddingId(p.id)
+    const { data: variants } = await supabase.from('product_variants').select('*').eq('product_id', p.id)
+    const variant = variants?.find(v => v.stock > 0)
+    setQuickAddingId(null)
+    if (!variant) {
+      toast.error(t.productOutOfStock)
+      return
+    }
+    addItem(p, variant.size, variant.color, 1)
+    toast.success(t.productAdded, { description: `${p.name}, ${variant.size}` })
+  }
+
+  // Hero and the curated grid share one pool: featured products first,
+  // falling back to the most recently added products if nothing is
+  // featured yet -- the homepage is never empty on a fresh catalog.
+  const pool = featured.length > 0 ? featured : recent
+  const heroProduct = pool[0]
+  const curated = pool.filter(p => p.id !== heroProduct?.id).slice(0, 5)
+  const lookThumbs = curated.length > 0 ? curated.slice(0, 2) : (heroProduct ? [heroProduct] : [])
+  const dropTarget = dropEndsAt || placeholderDrop
+
   return (
-    <div>
+    <div className="bg-cream">
       {/* ===== HERO ===== */}
-      <section className="relative min-h-[95vh] flex items-center overflow-hidden bg-background">
+      {banners.length > 0 ? (
+        <HeroBanners banners={banners} />
+      ) : (
+      <section className="relative min-h-[95vh] flex items-center overflow-hidden bg-cream">
+        {/* Background texture photo -- kept very subtle so text/product stay legible over it */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-[0.07]"
+          style={{ backgroundImage: "url('/stock/hero-background-leather.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-cream/60" />
         {/* Soft moving gradient orbs */}
         <div className="absolute top-1/4 -end-32 w-[40vw] h-[40vw] bg-muted/40 rounded-full blur-3xl float-anim" />
         <div className="absolute bottom-1/4 -start-32 w-[35vw] h-[35vw] bg-muted/30 rounded-full blur-3xl float-anim" style={{ animationDelay: '2s' }} />
 
         <div className="relative max-w-[1400px] mx-auto px-6 lg:px-10 w-full grid lg:grid-cols-12 gap-8 items-center pt-10 pb-20">
           <div className="lg:col-span-7 z-10">
-            <p className="text-[11px] tracking-[0.3em] uppercase font-medium text-muted-foreground mb-8 fade-up">
-              <Sparkles className="w-3 h-3 inline-block me-2 -mt-0.5" />
-              {t.brandName} · {t.homeEyebrow}
+            <p className="text-[11px] tracking-[0.3em] uppercase font-medium text-gold-on-light mb-8 fade-up">
+              {t.homeEyebrow}
             </p>
             <h1 className="font-display text-6xl md:text-7xl lg:text-[7.5rem] leading-[0.95] tracking-[-0.03em] fade-up fade-up-2">
               {t.homeHeroTitle1}<br />
-              <span className="italic text-muted-foreground font-light">{t.homeHeroTitle2}</span>
+              {t.homeHeroTitle2}
             </h1>
             <p className="mt-8 text-base md:text-lg text-muted-foreground max-w-md font-light leading-relaxed fade-up fade-up-3">
               {t.homeHeroSubtitle}
@@ -99,33 +260,22 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="mt-20 flex items-center gap-10 fade-up fade-up-5">
-              <div>
-                <p className="font-display text-4xl">1986</p>
-                <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mt-1">{t.homeStat1}</p>
-              </div>
-              <div className="w-px h-12 bg-border" />
-              <div>
-                <p className="font-display text-4xl">12</p>
-                <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mt-1">{t.homeStat2}</p>
-              </div>
-              <div className="w-px h-12 bg-border hidden md:block" />
-              <div className="hidden md:block">
-                <p className="font-display text-4xl">∞</p>
-                <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mt-1">{t.homeStat3}</p>
-              </div>
+            {/* Vertical "scroll" hint */}
+            <div className="mt-20 hidden lg:flex flex-col items-center gap-3 w-fit fade-up fade-up-5">
+              <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">{t.homeHeroScroll}</span>
+              <span className="w-px h-12 bg-foreground/25" />
             </div>
           </div>
 
-          {/* Hero 3D shoe image with float + rotate */}
+          {/* Hero product image with float + Shop the Look card */}
           <div className="lg:col-span-5 relative h-[500px] lg:h-[680px] hidden lg:block">
-            {all[0] && (
+            {heroProduct && (
               <div className="absolute inset-0 reveal-3d" ref={addRevealRef}>
                 <div className="relative w-full h-full float-anim">
                   <div className="absolute inset-0 flex items-center justify-center">
                     <img
-                      src={all[0].image_url || ''}
-                      alt={all[0].name}
+                      src={heroProduct.image_url || ''}
+                      alt={heroProduct.name}
                       className="w-[120%] max-w-none h-auto object-contain drop-shadow-2xl"
                       style={{ filter: 'drop-shadow(0 50px 80px rgba(0,0,0,0.18))' }}
                     />
@@ -133,150 +283,165 @@ export default function Home() {
                 </div>
               </div>
             )}
-            {/* Floating price card */}
-            <div
-              className="absolute top-12 end-0 bg-background/95 backdrop-blur-sm border border-border px-5 py-4 shadow-xl scale-in"
-              style={{ animationDelay: '600ms' }}
-            >
-              <p className="text-[10px] tracking-[0.25em] uppercase text-muted-foreground mb-1">{all[0]?.category}</p>
-              <p className="font-display text-xl">{all[0]?.name}</p>
-              <p className="text-sm font-medium mt-1">${Number(all[0]?.price || 0).toFixed(0)}</p>
-            </div>
-            {/* Small 3D rotating circle */}
-            <div
-              className="absolute bottom-16 start-0 w-32 h-32 border border-border flex items-center justify-center spin-slow"
-              style={{ animationDuration: '40s' }}
-            >
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <defs>
-                  <path id="circ" d="M 50,50 m -38,0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" />
-                </defs>
-                <text fontSize="9" letterSpacing="3" fill="currentColor" className="text-foreground/60">
-                  <textPath href="#circ">BOM STORE · CAIRO · SINCE 1986 · BOM STORE · CAIRO · SINCE 1986 · </textPath>
-                </text>
-              </svg>
-              <span className="absolute font-display text-2xl italic">B</span>
-            </div>
+            {heroProduct && (
+              <Link
+                to={`/product/${heroProduct.slug}`}
+                className="group absolute bottom-10 start-0 bg-background/95 backdrop-blur-sm border border-border px-5 py-4 shadow-xl scale-in flex items-center gap-4 hover:shadow-2xl transition-shadow"
+                style={{ animationDelay: '600ms' }}
+              >
+                <div className="flex -space-x-3 rtl:space-x-reverse shrink-0">
+                  {lookThumbs.slice(0, 2).map((p, i) => (
+                    <img
+                      key={`${p.id}-${i}`}
+                      src={p.image_url || ''}
+                      alt=""
+                      className="w-9 h-9 rounded-full object-cover border-2 border-background bg-muted"
+                    />
+                  ))}
+                </div>
+                <div>
+                  <p className="font-display text-lg leading-tight">{heroProduct.name}</p>
+                  <p className="text-[11px] tracking-[0.2em] uppercase text-gold-on-light mt-1 inline-flex items-center gap-1.5">
+                    {t.homeShopTheLook}
+                    <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform flip-rtl" />
+                  </p>
+                </div>
+              </Link>
+            )}
           </div>
         </div>
       </section>
+      )}
 
-      {/* ===== 3D SCROLL SHOE SHOWCASE ===== */}
+      {/* ===== CATEGORIES STRIP (replaces the reference's brand-logo strip) ===== */}
+      <section className="py-8 px-6 lg:px-10 border-y border-border/60 bg-cream">
+        <div className="max-w-[1400px] mx-auto flex flex-wrap items-center gap-3">
+          <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground me-2">
+            {t.homeCategoriesEyebrow}
+          </span>
+          {CATEGORIES.map(cat => (
+            <Link
+              key={cat.key}
+              to={`/shop?category=${cat.key}`}
+              className="px-4 py-2 text-[12px] tracking-[0.1em] uppercase border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors"
+            >
+              {lang === 'ar' ? cat.ar : cat.en}
+            </Link>
+          ))}
+          <Link
+            to="/shop"
+            className="ms-auto inline-flex items-center gap-2 bg-foreground text-background px-5 py-2 text-[11px] tracking-[0.2em] uppercase font-medium hover:bg-foreground/85 transition-colors"
+          >
+            {t.shopViewAll}
+            <ArrowRight className="w-3.5 h-3.5 flip-rtl" />
+          </Link>
+        </div>
+      </section>
+
+      {/* ===== 3D SCROLL SHOE SHOWCASE -- untouched, signature feature ===== */}
       <ShoeShowcase3D />
 
-      {/* ===== SHOP BY CATEGORY ===== */}
-      <section className="py-24 md:py-32 px-6 lg:px-10 bg-background">
+      {/* ===== CURATED FOR YOU ===== */}
+      <section className="px-6 lg:px-10 py-24 md:py-32 bg-cream">
         <div className="max-w-[1400px] mx-auto">
-          <div className="text-center mb-16 reveal" ref={addRevealRef}>
-            <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-3">{t.homeCategoriesEyebrow}</p>
-            <h2 className="font-display text-5xl md:text-6xl lg:text-7xl leading-[0.95]">
-              {t.homeCategoriesTitle}
-            </h2>
-            <p className="text-muted-foreground font-light text-base mt-4 max-w-md mx-auto">
-              {t.homeCategoriesSubtitle}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            {CATEGORIES.map((cat, i) => (
-              <Link
-                key={cat.key}
-                to={`/shop?category=${cat.key}`}
-                className="group relative aspect-[4/5] overflow-hidden bg-muted reveal"
-                ref={addRevealRef}
-                style={{ transitionDelay: `${i * 60}ms` }}
-              >
-                <img
-                  src={cat.img}
-                  alt={cat.en}
-                  loading={i < 2 ? 'eager' : 'lazy'}
-                  decoding="async"
-                  width={1024}
-                  height={1024}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                  style={{ filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 group-hover:from-black/70 transition-colors duration-500" />
-                <div className="absolute inset-0 flex flex-col items-center justify-end p-6 md:p-8 text-background">
-                  <p className="text-[10px] tracking-[0.3em] uppercase font-medium opacity-90 mb-2 text-shadow-sm">0{i + 1}</p>
-                  <h3 className="font-display text-3xl md:text-4xl text-shadow">
-                    {lang === 'ar' ? cat.ar : cat.en}
-                  </h3>
-                  <div className="mt-4 w-10 h-10 rounded-full bg-background/15 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-                    <ArrowUpRight className="w-4 h-4 text-background" />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== FEATURED / NEW ARRIVALS ===== */}
-      <section className="px-6 lg:px-10 py-20 bg-muted/30">
-        <div className="max-w-[1400px] mx-auto">
-          <div className="flex items-end justify-between mb-12 reveal" ref={addRevealRef}>
-            <div>
-              <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-3">{t.homeFeaturedEyebrow}</p>
-              <h2 className="font-display text-5xl md:text-6xl">{t.homeFeaturedTitle}</h2>
-            </div>
-            <Link
-              to="/shop"
-              className="hidden md:inline-flex items-center gap-2 text-[12px] tracking-[0.2em] uppercase font-medium border-b border-foreground/30 pb-1 hover:border-foreground transition-colors"
-            >
-              {t.homeFeaturedViewAll}
-              <ArrowRight className="w-4 h-4 flip-rtl" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featured.map((p, i) => (
-              <Link
+          <SectionHeading
+            align="between"
+            eyebrow={t.homeFeaturedEyebrow}
+            title={t.homeFeaturedTitle}
+            viewAllHref="/shop"
+            viewAllLabel={t.homeFeaturedViewAll}
+            className="mb-12 reveal"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-14">
+            {curated.map((p, i) => (
+              <ProductCard
                 key={p.id}
-                to={`/product/${p.slug}`}
-                className="group block reveal hover-3d"
-                ref={addRevealRef}
-                style={{ transitionDelay: `${i * 80}ms` }}
-              >
-                <div className="relative aspect-[4/5] overflow-hidden bg-background">
-                  <img
-                    src={p.image_url || ''}
-                    alt={p.name}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                  />
-                  <div className="absolute top-3 start-3 bg-background/90 backdrop-blur-sm px-3 py-1.5 text-[10px] tracking-[0.25em] uppercase">
-                    {t.shopFeatured}
-                  </div>
-                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-colors duration-500" />
-                  <div className="absolute bottom-3 end-3 w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-                    <Plus className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="mt-5">
-                  <p className="text-[10px] tracking-[0.3em] text-muted-foreground uppercase mb-2">
-                    {p.category}
-                  </p>
-                  <h3 className="font-display text-2xl group-hover:text-muted-foreground transition-colors">
-                    {p.name}
-                  </h3>
-                  <p className="mt-2 text-sm font-medium">
-                    ${Number(p.price).toFixed(0)}
-                  </p>
-                </div>
-              </Link>
+                product={p}
+                categoryLabel={categoryLabel(p.category)}
+                onQuickView={setQuickViewId}
+                onQuickAdd={quickAdd}
+                quickAdding={quickAddingId === p.id}
+                animationDelay={`${(i % 8) * 60}ms`}
+              />
             ))}
           </div>
         </div>
       </section>
 
-      {/* ===== ATELIER EDITORIAL ===== */}
+      {/* ===== LIMITED DROP ===== */}
+      <section className="relative bg-[#0A0907] text-background overflow-hidden">
+        <div className="max-w-[1400px] mx-auto grid lg:grid-cols-2">
+          <div className="relative aspect-[4/5] lg:aspect-auto lg:min-h-[640px] reveal" ref={addRevealRef}>
+            <img
+              src="/stock/hero-banner-moody-sneakers-legs.jpg"
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/10" />
+          </div>
+          <div className="relative flex items-center px-6 lg:px-16 py-20 overflow-hidden">
+            {/* Oversized faint brand-initial watermark */}
+            <span className="pointer-events-none select-none absolute -top-16 -end-10 font-display text-[22rem] md:text-[28rem] leading-none text-background/[0.04]">
+              B
+            </span>
+            <div className="relative reveal" ref={addRevealRef}>
+              <p className="text-[11px] tracking-[0.3em] uppercase text-gold mb-6">{t.homeDropEyebrow}</p>
+              <h2 className="font-display text-5xl md:text-6xl leading-[0.95] mb-6">
+                {t.homeDropTitle1}<br />{t.homeDropTitle2}
+              </h2>
+              <p className="text-background/70 font-light leading-relaxed max-w-sm mb-10">
+                {t.homeDropSubtitle}
+              </p>
+              <CountdownTimer
+                target={dropTarget}
+                labels={{ days: t.homeDropDays, hours: t.homeDropHrs, minutes: t.homeDropMins, seconds: t.homeDropSecs }}
+                className="mb-10"
+              />
+              <Link
+                to="/shop"
+                className="group inline-flex items-center gap-3 bg-background text-foreground px-8 py-4 text-[13px] tracking-[0.2em] uppercase font-medium hover:bg-background/90 transition-all duration-300"
+              >
+                {t.homeDropCta}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform flip-rtl" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== TRUST BADGES ===== */}
+      <section className="px-6 lg:px-10 py-20 bg-cream">
+        <div className="max-w-[1400px] mx-auto">
+          <p className="text-center text-[11px] tracking-[0.3em] uppercase text-gold-on-light mb-12 reveal" ref={addRevealRef}>
+            {t.homePromiseEyebrow}
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-10">
+            {[
+              { icon: Truck, title: t.homeTrust1Title, desc: t.homeTrust1Desc },
+              { icon: ShieldCheck, title: t.homeTrust2Title, desc: t.homeTrust2Desc },
+              { icon: RotateCcw, title: t.homeTrust3Title, desc: t.homeTrust3Desc },
+              { icon: Lock, title: t.homeTrust4Title, desc: t.homeTrust4Desc },
+            ].map((item, i) => (
+              <div key={i} className="text-center reveal" ref={addRevealRef} style={{ transitionDelay: `${i * 80}ms` }}>
+                <item.icon className="w-6 h-6 mx-auto mb-4 text-foreground/70" strokeWidth={1.5} />
+                <p className="text-sm font-medium tracking-wide mb-1.5">{item.title}</p>
+                <p className="text-xs text-muted-foreground font-light leading-relaxed max-w-[16rem] mx-auto">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== ATELIER EDITORIAL (kept -- distinct brand story, not covered
+          by any of the new sections above) ===== */}
       <section className="py-24 md:py-32 px-6 lg:px-10 bg-foreground text-background overflow-hidden">
         <div className="max-w-[1400px] mx-auto grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <div className="relative aspect-[4/5] overflow-hidden reveal" ref={addRevealRef}>
-            {all[5] && (
+            {recent[5] && (
               <img
-                src={all[5].image_url || ''}
-                alt={all[5].name}
+                src={recent[5].image_url || ''}
+                alt={recent[5].name}
                 className="absolute inset-0 w-full h-full object-cover"
               />
             )}
@@ -318,11 +483,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== TESTIMONIALS ===== */}
-      <section className="py-24 md:py-32 px-6 lg:px-10 bg-background">
+      {/* ===== TESTIMONIALS (kept -- social proof, restyled to cream) ===== */}
+      <section className="py-24 md:py-32 px-6 lg:px-10 bg-cream">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16 reveal" ref={addRevealRef}>
-            <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-3">{t.homeTestimonialsEyebrow}</p>
+            <p className="text-[11px] tracking-[0.3em] uppercase text-gold-on-light mb-3">{t.homeTestimonialsEyebrow}</p>
             <h2 className="font-display text-5xl md:text-6xl">{t.homeTestimonialsTitle}</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -333,7 +498,7 @@ export default function Home() {
             ].map((item, i) => (
               <div
                 key={i}
-                className="group relative bg-muted/40 p-8 md:p-10 reveal hover-3d"
+                className="group relative bg-background p-8 md:p-10 reveal hover-3d"
                 ref={addRevealRef}
                 style={{ transitionDelay: `${i * 100}ms` }}
               >
@@ -353,36 +518,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== NEWSLETTER ===== */}
-      <section className="py-24 md:py-32 px-6 lg:px-10 border-t border-border">
-        <div className="max-w-xl mx-auto text-center reveal" ref={addRevealRef}>
-          <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-6">{t.homeNewsletterEyebrow}</p>
-          <h2 className="font-display text-4xl md:text-5xl mb-5 leading-tight">
-            {t.homeNewsletterTitle}
-          </h2>
-          <p className="text-muted-foreground font-light text-sm mb-10 leading-relaxed">
-            {t.homeNewsletterDesc}
-          </p>
-          <form
-            onSubmit={(e) => { e.preventDefault(); toast.success(t.homeNewsletterToast) }}
-            className="flex gap-2 max-w-md mx-auto"
-          >
-            <input
-              type="email"
-              required
-              placeholder={t.homeNewsletterPlaceholder}
-              dir={lang === 'ar' ? 'rtl' : 'ltr'}
-              className="flex-1 bg-transparent border-b-2 border-foreground/30 focus:border-foreground outline-none py-3 text-sm placeholder:text-muted-foreground/60 transition-colors"
-            />
-            <button
-              type="submit"
-              className="text-[12px] tracking-[0.2em] uppercase font-medium border-b-2 border-foreground pb-1 hover:opacity-70 transition-opacity cursor-pointer"
-            >
-              {t.homeNewsletterCta}
-            </button>
-          </form>
-        </div>
-      </section>
+      <QuickViewModal productId={quickViewId} onClose={() => setQuickViewId(null)} />
     </div>
   )
 }

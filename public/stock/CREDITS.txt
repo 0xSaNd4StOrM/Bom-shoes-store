@@ -1,0 +1,18 @@
+Stock photography sourced for the homepage redesign (dark "limited drop" banner).
+Both Unsplash License — free for commercial use, no attribution required (credited anyway):
+
+hero-banner-moody-sneakers-legs.jpg
+  "Sneakers and legs in a monochrome perspective" by Efe Yagiz Soysal
+  https://unsplash.com/photos/sneakers-and-legs-in-a-monochrome-perspective-ufzSzlG7mA8
+  License: Unsplash License (https://unsplash.com/license)
+
+pedestal-dark-texture-background.jpg
+  Dark textured plaster wall by Annie Spratt
+  https://unsplash.com/photos/6a3nqQ1YwBw
+  License: Unsplash License (https://unsplash.com/license)
+
+hero-background-leather.jpg
+  "Brown leather" texture by Felipe Santana
+  https://unsplash.com/photos/brown-leather-xJkTCbtuqAY
+  License: Unsplash License (https://unsplash.com/license)
+  Used as a subtle low-opacity background texture in the homepage hero section.

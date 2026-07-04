@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useT } from '@/contexts/LanguageContext'
 
 /**
@@ -63,27 +63,69 @@ export default function ShoeShowcase3D() {
   const [active, setActive] = useState(0)
   const [scrollProgress, setScrollProgress] = useState(0)
 
+  // Section top offset + scrollable height, read from the DOM once (mount + resize)
+  // instead of on every scroll tick — keeps the scroll handler free of layout reads.
+  const metricsRef = useRef({ sectionTop: 0, sectionHeight: 1 })
+  const tickingRef = useRef(false)
+  const resizeTickingRef = useRef(false)
+  const reducedMotionRef = useRef(false)
+
   useEffect(() => {
-    function onScroll() {
-      if (!sectionRef.current) return
-      const rect = sectionRef.current.getBoundingClientRect()
-      const sectionTop = window.scrollY + rect.top
-      const sectionHeight = sectionRef.current.offsetHeight - window.innerHeight
+    reducedMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    function measure() {
+      const el = sectionRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      metricsRef.current = {
+        sectionTop: window.scrollY + rect.top,
+        sectionHeight: el.offsetHeight - window.innerHeight,
+      }
+    }
+
+    function applyScroll() {
+      const { sectionTop, sectionHeight } = metricsRef.current
       const scrolled = window.scrollY - sectionTop
       const progress = Math.max(0, Math.min(1, scrolled / sectionHeight))
       setScrollProgress(progress)
-      const idx = Math.min(SHOES.length - 1, Math.floor(progress * SHOES.length))
-      setActive(idx)
+      setActive(Math.min(SHOES.length - 1, Math.floor(progress * SHOES.length)))
     }
+
+    // Batch to one update per animation frame no matter how many scroll events fire.
+    function onScroll() {
+      if (tickingRef.current) return
+      tickingRef.current = true
+      requestAnimationFrame(() => {
+        applyScroll()
+        tickingRef.current = false
+      })
+    }
+
+    function onResize() {
+      if (resizeTickingRef.current) return
+      resizeTickingRef.current = true
+      requestAnimationFrame(() => {
+        measure()
+        applyScroll()
+        resizeTickingRef.current = false
+      })
+    }
+
+    measure()
+    applyScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
-    onScroll()
-    return () => window.removeEventListener('scroll', onScroll)
+    window.addEventListener('resize', onResize, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onResize)
+    }
   }, [])
 
   const current = SHOES[active]
+  const reducedMotion = reducedMotionRef.current
   // Continuous scroll position (0..N) used to drive the bottom-to-top slide
   const rawPos = scrollProgress * SHOES.length
-  const floatY = Math.sin(scrollProgress * Math.PI * 3) * 24
+  const floatY = reducedMotion ? 0 : Math.sin(scrollProgress * Math.PI * 3) * 24
 
   return (
     <section
@@ -126,6 +168,14 @@ export default function ShoeShowcase3D() {
             // Fade out as it leaves the centred band
             const opacity = isActive ? 1 : Math.max(0, 1 - (Math.abs(diff) - 0.5) * 1.4)
             const scale = isActive ? 1 : Math.max(0.75, 1 - Math.abs(diff) * 0.12)
+            // Reduced motion: skip the translate/scale slide entirely and just
+            // crossfade opacity in place (same 600ms ease timing, no parallax).
+            const transform = reducedMotion
+              ? 'none'
+              : `translateY(calc(${baseTranslateY}vh + ${isActive ? floatY : 0}px)) scale(${scale})`
+            const transition = reducedMotion
+              ? 'opacity 600ms ease'
+              : 'opacity 600ms ease, transform 600ms cubic-bezier(0.16, 1, 0.3, 1)'
             return (
               <img
                 key={i}
@@ -138,9 +188,9 @@ export default function ShoeShowcase3D() {
                 fetchPriority={i === 0 ? 'high' : 'auto'}
                 className="absolute w-[60vw] max-w-[680px] h-auto select-none"
                 style={{
-                  opacity,
-                  transform: `translateY(calc(${baseTranslateY}vh + ${isActive ? floatY : 0}px)) scale(${scale})`,
-                  transition: 'opacity 600ms ease, transform 600ms cubic-bezier(0.16, 1, 0.3, 1)',
+                  opacity: reducedMotion ? (isActive ? 1 : 0) : opacity,
+                  transform,
+                  transition,
                   filter: isActive ? 'drop-shadow(0 60px 80px rgba(0,0,0,0.55))' : 'drop-shadow(0 30px 40px rgba(0,0,0,0.35))',
                   willChange: 'transform, opacity',
                 }}
@@ -184,10 +234,11 @@ export default function ShoeShowcase3D() {
             </p>
             <a
               href={`/product/${shoeSlug(current.enTitle)}`}
-              className="pointer-events-auto inline-flex items-center gap-2 text-sm tracking-wider border-b border-white/70 pb-1 hover:border-white transition-colors text-shadow-sm"
+              className="group pointer-events-auto inline-flex items-center gap-2 text-sm tracking-wider border-b border-white/70 pb-1 hover:border-white transition-colors text-shadow-sm"
               style={{ animation: 'fadeUp 600ms 500ms ease-out both' }}
             >
-              {t.showcaseCta} →
+              {t.showcaseCta}
+              <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
             </a>
           </div>
         </div>
@@ -207,11 +258,11 @@ export default function ShoeShowcase3D() {
                 window.scrollTo({ top: target, behavior: 'smooth' })
               }}
               aria-label={`Go to slide ${i + 1}`}
-              className="w-2 h-2 rounded-full transition-all duration-300 cursor-pointer"
+              className="showcase-dot w-2 h-2 rounded-full cursor-pointer"
               style={{
                 backgroundColor: i === active ? '#fff' : 'rgba(255,255,255,0.3)',
-                transform: i === active ? 'scale(1.5)' : 'scale(1)',
-              }}
+                '--dot-scale': i === active ? 1.5 : 1,
+              } as CSSProperties}
             />
           ))}
         </div>

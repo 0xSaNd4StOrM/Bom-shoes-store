@@ -10,7 +10,7 @@ type LanguageContextType = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
-const LANG_KEY = 'mashwar-lang'
+const LANG_KEY = 'bom-store-lang'
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT, useLanguage } from '@/contexts/LanguageContext'
+import { useSeo } from '@/hooks/useSeo'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -16,6 +17,11 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useSeo({
+    title: 'Sign In — BOM Store',
+    description: 'Sign in to your BOM Store account to track orders and manage your wishlist.',
+  })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -38,8 +44,8 @@ export default function Login() {
           <h1 className="font-display text-4xl md:text-5xl">{t.loginTitle}</h1>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.loginEmail}</label>
+          <label className="block">
+            <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.loginEmail}</span>
             <input
               type="email"
               required
@@ -49,9 +55,9 @@ export default function Login() {
               className="w-full bg-transparent border-b border-foreground/30 focus:border-foreground outline-none py-2 text-sm transition-colors"
               placeholder="you@example.com"
             />
-          </div>
-          <div>
-            <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.loginPassword}</label>
+          </label>
+          <label className="block">
+            <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.loginPassword}</span>
             <input
               type="password"
               required
@@ -61,7 +67,7 @@ export default function Login() {
               className="w-full bg-transparent border-b border-foreground/30 focus:border-foreground outline-none py-2 text-sm transition-colors"
               placeholder="••••••••"
             />
-          </div>
+          </label>
           <button
             type="submit"
             disabled={loading}

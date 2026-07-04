@@ -1,5 +1,6 @@
-import { useLanguage } from '@/contexts/LanguageContext'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 
 interface LogoProps {
   size?: number
@@ -7,15 +8,69 @@ interface LogoProps {
   showText?: boolean
 }
 
+// Singleton row id -- see supabase/migrations/20260704008000_store_settings_realtime.sql.
+const STORE_SETTINGS_ID = '00000000-0000-0000-0000-000000000001'
+
+// One-time fetch of the admin-configured logo URL, if any. Stays null (and
+// the SVG monogram below keeps rendering) on a missing row, a fetch error,
+// or an unreachable table -- this must never blank/break the header logo.
+function useStoreLogoUrl() {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .from('store_settings')
+      .select('logo_url')
+      .eq('id', STORE_SETTINGS_ID)
+      .maybeSingle()
+      .then(
+        ({ data }) => { if (!cancelled) setUrl(data?.logo_url || null) },
+        () => {} // ponytail: leave url null, SVG fallback covers it
+      )
+    return () => { cancelled = true }
+  }, [])
+  return url
+}
+
 /**
  * BOM Store monogram logo.
  * "B" inside a thin gold circle, with "BOM STORE" underneath (Latin, in both languages).
+ * Renders the admin-uploaded logo (store_settings.logo_url) if one is set,
+ * otherwise falls back to this hardcoded SVG monogram.
  */
 export default function Logo({ size = 64, className, showText = true }: LogoProps) {
-  const { lang } = useLanguage()
+  const fetchedLogoUrl = useStoreLogoUrl()
+  const [imgFailed, setImgFailed] = useState(false)
+  const logoUrl = imgFailed ? null : fetchedLogoUrl
   const r = size * 0.45
   const cx = size / 2
   const cy = size / 2
+
+  const text = showText && (
+    <div
+      className="mt-1 text-center font-display tracking-[0.35em] text-[10px] font-light"
+      style={{ color: '#B8860B' }}
+    >
+      BOM STORE
+    </div>
+  )
+
+  if (logoUrl) {
+    return (
+      <div className={cn('flex flex-col items-center select-none', className)} style={{ width: size }}>
+        <img
+          src={logoUrl}
+          alt="BOM Store logo"
+          width={size}
+          height={size}
+          style={{ width: size, height: size }}
+          className="object-contain"
+          onError={() => setImgFailed(true)}
+        />
+        {text}
+      </div>
+    )
+  }
 
   return (
     <div className={cn('flex flex-col items-center select-none', className)} style={{ width: size }}>
@@ -58,23 +113,15 @@ export default function Logo({ size = 64, className, showText = true }: LogoProp
           y={cy}
           textAnchor="middle"
           dominantBaseline="central"
-          fontFamily={lang === 'ar' ? "'Reem Kufi', 'Amiri', serif" : "'Cormorant Garamond', 'Playfair Display', Georgia, serif"}
+          fontFamily="'Cairo', 'Amiri', Georgia, serif"
           fontSize={size * 0.5}
-          fontWeight={500}
-          fontStyle={lang === 'ar' ? 'normal' : 'italic'}
+          fontWeight={600}
           fill="url(#goldGradient)"
         >
-          {lang === 'ar' ? 'م' : 'M'}
+          B
         </text>
       </svg>
-      {showText && (
-        <div
-          className="mt-1 text-center font-display tracking-[0.35em] text-[10px] font-light"
-          style={{ color: '#B8860B' }}
-        >
-          {lang === 'ar' ? 'مَشْوار' : 'MASHWAR'}
-        </div>
-      )}
+      {text}
     </div>
   )
 }

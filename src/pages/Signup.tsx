@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT, useLanguage } from '@/contexts/LanguageContext'
+import { useSeo } from '@/hooks/useSeo'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -14,6 +15,11 @@ export default function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useSeo({
+    title: 'Create Account — BOM Store',
+    description: 'Create a BOM Store account to start shopping handcrafted, built-to-last shoes.',
+  })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -40,8 +46,8 @@ export default function Signup() {
           <h1 className="font-display text-4xl md:text-5xl">{t.signupTitle}</h1>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.signupName}</label>
+          <label className="block">
+            <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.signupName}</span>
             <input
               type="text"
               required
@@ -51,9 +57,9 @@ export default function Signup() {
               className="w-full bg-transparent border-b border-foreground/30 focus:border-foreground outline-none py-2 text-sm transition-colors"
               placeholder={lang === 'ar' ? 'اسمك' : 'Your name'}
             />
-          </div>
-          <div>
-            <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.signupEmail}</label>
+          </label>
+          <label className="block">
+            <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.signupEmail}</span>
             <input
               type="email"
               required
@@ -63,9 +69,9 @@ export default function Signup() {
               className="w-full bg-transparent border-b border-foreground/30 focus:border-foreground outline-none py-2 text-sm transition-colors"
               placeholder="you@example.com"
             />
-          </div>
-          <div>
-            <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.signupPassword}</label>
+          </label>
+          <label className="block">
+            <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.signupPassword}</span>
             <input
               type="password"
               required
@@ -76,7 +82,7 @@ export default function Signup() {
               className="w-full bg-transparent border-b border-foreground/30 focus:border-foreground outline-none py-2 text-sm transition-colors"
               placeholder={t.signupPasswordHint}
             />
-          </div>
+          </label>
           <button
             type="submit"
             disabled={loading}

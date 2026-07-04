@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /admin
+Disallow: /account
+Disallow: /checkout
+Disallow: /cart
+
+# TODO: replace your-store-domain.com with the real production domain once
+# it's known -- keep it in sync with the SITE_URL secret used by the
+# create-order and sitemap edge functions (see supabase/functions/.env.example).
+Sitemap: https://your-store-domain.com/sitemap.xml

@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useCart } from '@/contexts/CartContext'
 import { useT } from '@/contexts/LanguageContext'
-import { supabase } from '@/lib/supabase'
 import { Check } from 'lucide-react'
+import { useSeo } from '@/hooks/useSeo'
 
 export default function CheckoutSuccess() {
   const [params] = useSearchParams()
@@ -12,25 +12,23 @@ export default function CheckoutSuccess() {
   const cleared = useRef(false)
   const t = useT()
 
+  useSeo({ title: `${t.successTitle} — ${t.brandName}`, description: t.successDesc })
+
+  // Payment confirmation is no longer trusted from the client: this page is
+  // just where Kashier redirects the browser back to, which can happen
+  // before, after, or without the server-to-server webhook ever firing. The
+  // only place payment_status/status/stock are ever mutated is
+  // fulfill_order(), called from supabase/functions/kashier-webhook once
+  // Kashier actually confirms the payment. (Previously this effect called
+  // supabase.from('orders').update({ payment_status: 'paid', ... }) directly
+  // from the browser -- anyone could visit this URL with any orderId and
+  // mark that order paid without paying, which is the same class of bug
+  // this whole change fixes elsewhere; removed rather than left in place.)
   useEffect(() => {
     if (cleared.current) return
     cleared.current = true
-
-    // Clear cart
     clearCart()
-
-    // Update order status in Supabase
-    if (orderId) {
-      supabase
-        .from('orders')
-        .update({
-          status: 'confirmed',
-          payment_status: 'paid',
-        })
-        .eq('kashier_order_id', orderId)
-        .then(() => {})
-    }
-  }, [orderId])
+  }, [])
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-6 text-center">

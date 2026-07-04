@@ -7,6 +7,10 @@
     --radius: 0.5rem;
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
+    /* Warm cream tone for redesigned homepage sections/product cards --
+       distinct from the pure-white --background above (which most existing
+       pages keep using as-is). */
+    --cream: 36 38% 93%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 0%;
     --popover: 0 0% 100%;
@@ -16,7 +20,7 @@
     --secondary: 30 8% 96%;
     --secondary-foreground: 0 0% 8%;
     --muted: 30 8% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted-foreground: 0 0% 42%; /* darkened from 45% so body copy clears WCAG AA 4.5:1 on --cream, not just --background */
     --accent: 38 60% 50%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 50%;
@@ -40,16 +44,16 @@
   body {
     background: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Cairo', 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   body.font-arabic {
-    font-family: 'Cairo', 'Noto Naskh Arabic', 'Inter', sans-serif;
+    font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-    font-weight: 500;
+    font-family: 'Cairo', Georgia, serif;
+    font-weight: 600;
     letter-spacing: -0.02em;
   }
 
@@ -59,8 +63,8 @@
   body.font-arabic h4,
   body.font-arabic h5,
   body.font-arabic h6 {
-    font-family: 'Reem Kufi', 'Amiri', 'Cairo', serif;
-    font-weight: 500;
+    font-family: 'Cairo', 'Amiri', serif;
+    font-weight: 600;
     letter-spacing: 0;
     line-height: 1.4;
   }
@@ -68,14 +72,14 @@
 
 @layer utilities {
   .font-display {
-    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+    font-family: 'Cairo', Georgia, serif;
   }
   .font-sans {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Cairo', 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   body.font-arabic .font-display {
-    font-family: 'Reem Kufi', 'Amiri', 'Cairo', serif;
+    font-family: 'Cairo', 'Amiri', serif;
   }
 
   .text-zen {
@@ -102,13 +106,31 @@
   .scrollbar-none::-webkit-scrollbar { display: none; }
   .scrollbar-none { scrollbar-width: none; }
 
-  /* Gold gradient text */
+  /* Gold gradient text -- only for use on dark backgrounds (e.g. the Limited
+     Drop banner). All three stops fall below WCAG AA 4.5:1 against the
+     cream/white backgrounds used elsewhere; use .text-gold-on-light there. */
   .text-gold {
     background: linear-gradient(135deg, #D4AF37 0%, #F1D27A 50%, #B8860B 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
+  }
+
+  /* Darker gold gradient text for use on light backgrounds (--cream /
+     --background). Every stop clears WCAG AA 4.5:1 against both. */
+  .text-gold-on-light {
+    background: linear-gradient(135deg, #8a6512 0%, #7c5c10 50%, #6b4e0d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* Solid version of the same gold, for small highlight backgrounds (e.g.
+     the ProductCard "NEW" badge) rather than gradient text. */
+  .bg-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #F1D27A 50%, #B8860B 100%);
   }
 
   /* Text stroke / shadow for white text on imagery
@@ -271,6 +293,18 @@
 .reveal-3d.is-visible {
   opacity: 1;
   transform: perspective(1000px) rotateX(0) translateZ(0);
+}
+
+/* Shoe showcase side-dot nav — subtle hover scale/opacity on top of the active-dot scale */
+.showcase-dot {
+  /* cubic-bezier(0.4,0,0.2,1) matches Tailwind's transition-all default —
+     keeps the existing active-dot scale timing identical to before. */
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1), background-color 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(var(--dot-scale, 1));
+}
+.showcase-dot:hover {
+  transform: scale(calc(var(--dot-scale, 1) * 1.2));
+  opacity: 0.8;
 }
 
 /* Card hover 3D */

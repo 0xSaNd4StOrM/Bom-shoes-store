@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets -- real values go in these, keep out of version control.
+# (.env.example files stay tracked.)
+.env
+.env.local
+supabase/functions/.env

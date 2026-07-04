@@ -22,6 +22,9 @@ module.exports = {
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
+				// Warm cream background token for redesigned homepage sections/cards --
+				// additive, kept separate from --background (pure white, unchanged).
+				cream: 'hsl(var(--cream))',
 				primary: {
 					DEFAULT: '#2B5D3A',
 					foreground: 'hsl(var(--primary-foreground))',

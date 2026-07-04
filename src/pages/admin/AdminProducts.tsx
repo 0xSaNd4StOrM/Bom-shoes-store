@@ -1,39 +1,195 @@
 import { useEffect, useState } from 'react'
-import { supabase, Product } from '@/lib/supabase'
+import { supabase, Product, ProductImage, ProductCatalogEntry } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
-import { Loader2, Plus, X, Edit2, Trash2 } from 'lucide-react'
+import { Loader2, Plus, X, Edit2, Trash2, Star } from 'lucide-react'
 import { toast } from 'sonner'
 
 const EMPTY: Partial<Product> = {
   name: '', slug: '', description: '', price: 0, category: 'Sneakers',
-  image_url: '', stock: 20, sizes: ['38','39','40','41','42','43','44','45'],
-  colors: ['Bone'], featured: false,
+  featured: false, sale_price: null, materials: '', weight_grams: null, tags: [],
 }
 
-const CATEGORY_VALUES = ['Sneakers', 'Boots', 'Loafers', 'Derbies', 'Slippers', 'Sandals']
+export const CATEGORY_VALUES = ['Sneakers', 'Boots', 'Loafers', 'Derbies', 'Slippers', 'Sandals']
+
+// Local editable row for the variant list. `_key` is a stable React key that
+// exists even before a row has been saved to the DB (no `id` yet).
+type VariantRow = {
+  id?: string
+  size: string
+  color: string
+  sku: string
+  barcode: string
+  stock: number
+  price_override: string
+  _key: string
+}
+
+function blankVariantRow(): VariantRow {
+  return { size: '', color: '', sku: '', barcode: '', stock: 0, price_override: '', _key: crypto.randomUUID() }
+}
+
+// Recomputes products.image_url from the current product_images rows so every
+// page that still reads that legacy column (cart, admin orders list, etc.)
+// keeps showing a sensible thumbnail. Featured image wins; otherwise first by
+// position; empty string if the gallery is empty.
+async function syncFeaturedImage(productId: string) {
+  const { data } = await supabase.from('product_images').select('*').eq('product_id', productId).order('position')
+  const rows = data || []
+  const featured = rows.find(i => i.is_featured) || rows[0]
+  await supabase.from('products').update({ image_url: featured?.url || '' }).eq('id', productId)
+}
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<ProductCatalogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Product> | null>(null)
   const [saving, setSaving] = useState(false)
+  const [images, setImages] = useState<ProductImage[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [variantRows, setVariantRows] = useState<VariantRow[]>([])
+  // cost_price lives in its own admin-only-select table (product_costs), not
+  // on products/product_catalog -- see migration comment. Tracked separately
+  // here rather than on `editing` since it's not part of the Product type.
+  const [costPrice, setCostPrice] = useState<number | null>(null)
   const { isAdmin } = useAuth()
   const t = useT()
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase.from('product_catalog').select('*').order('created_at', { ascending: false })
     setProducts(data || [])
     setLoading(false)
   }
   useEffect(() => { load() }, [])
 
+  async function loadImages(productId: string) {
+    const { data } = await supabase.from('product_images').select('*').eq('product_id', productId).order('position')
+    setImages(data || [])
+  }
+
+  async function loadVariants(productId: string) {
+    const { data } = await supabase.from('product_variants').select('*').eq('product_id', productId).order('created_at')
+    const rows: VariantRow[] = (data || []).map(v => ({
+      id: v.id,
+      size: v.size,
+      color: v.color,
+      sku: v.sku || '',
+      barcode: v.barcode || '',
+      stock: v.stock,
+      price_override: v.price_override != null ? String(v.price_override) : '',
+      _key: v.id,
+    }))
+    setVariantRows(rows)
+  }
+
+  async function loadCostPrice(productId: string) {
+    const { data } = await supabase.from('product_costs').select('cost_price').eq('product_id', productId).maybeSingle()
+    setCostPrice(data?.cost_price ?? null)
+  }
+
   function openNew() {
     setEditing({ ...EMPTY })
+    setImages([])
+    setVariantRows([blankVariantRow()])
+    setCostPrice(null)
+    setDragIndex(null)
   }
-  function openEdit(p: Product) {
+  async function openEdit(p: ProductCatalogEntry) {
     setEditing({ ...p })
+    setDragIndex(null)
+    await Promise.all([loadImages(p.id), loadVariants(p.id), loadCostPrice(p.id)])
+  }
+
+  function updateVariantRow(key: string, field: keyof VariantRow, value: string | number) {
+    setVariantRows(rows => rows.map(r => (r._key === key ? { ...r, [field]: value } : r)))
+  }
+  function addVariantRow() {
+    setVariantRows(rows => [...rows, blankVariantRow()])
+  }
+  function removeVariantRow(key: string) {
+    setVariantRows(rows => rows.filter(r => r._key !== key))
+  }
+
+  // Full replace against the DB for this product: delete every existing
+  // variant row, then insert the current set in one batch. Per-row
+  // update()/insert() calls against unique(product_id, size, color) can fail
+  // mid-loop when two rows swap values (updating row A to row B's current
+  // size/color hits the constraint before row B is touched) -- delete+insert
+  // sidesteps that entirely. Fine for an admin-only, low-traffic screen.
+  async function saveVariants(productId: string) {
+    const rows = variantRows
+      .filter(r => r.size.trim() && r.color.trim()) // ponytail: skip incomplete rows, don't persist half-filled variants
+      .map(row => ({
+        product_id: productId,
+        size: row.size.trim(),
+        color: row.color.trim(),
+        sku: row.sku.trim() || null,
+        barcode: row.barcode.trim() || null,
+        stock: Number(row.stock) || 0,
+        price_override: row.price_override.trim() === '' ? null : Number(row.price_override),
+      }))
+    const { error: delError } = await supabase.from('product_variants').delete().eq('product_id', productId)
+    if (delError) throw delError
+    if (rows.length) {
+      const { error: insError } = await supabase.from('product_variants').insert(rows)
+      if (insError) throw insError
+    }
+  }
+
+  async function handleUpload(files: FileList | null) {
+    if (!files || !files.length || !editing?.id) return
+    const productId = editing.id
+    setUploading(true)
+    try {
+      let position = images.length ? Math.max(...images.map(i => i.position)) + 1 : 0
+      for (const file of Array.from(files)) {
+        const path = `${productId}/${Date.now()}-${file.name}`
+        const { error: upErr } = await supabase.storage.from('product-images').upload(path, file)
+        if (upErr) throw upErr
+        const { data: pub } = supabase.storage.from('product-images').getPublicUrl(path)
+        const { error: insErr } = await supabase.from('product_images').insert({
+          product_id: productId, url: pub.publicUrl, position: position++,
+        })
+        if (insErr) throw insErr
+      }
+      await loadImages(productId)
+      await syncFeaturedImage(productId)
+    } catch (e: any) {
+      toast.error(e.message || t.adminRequired)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleDeleteImage(img: ProductImage) {
+    if (!editing?.id) return
+    // ponytail: storage path is derived from the public URL (bucket name is
+    // unique in this project) rather than stored separately.
+    const path = img.url.split('/product-images/')[1]
+    if (path) await supabase.storage.from('product-images').remove([decodeURIComponent(path)])
+    await supabase.from('product_images').delete().eq('id', img.id)
+    await loadImages(editing.id)
+    await syncFeaturedImage(editing.id)
+  }
+
+  async function handleSetFeatured(img: ProductImage) {
+    if (!editing?.id) return
+    await supabase.from('product_images').update({ is_featured: false }).eq('product_id', editing.id)
+    await supabase.from('product_images').update({ is_featured: true }).eq('id', img.id)
+    await loadImages(editing.id)
+    await syncFeaturedImage(editing.id)
+  }
+
+  async function handleDropImage(dropIndex: number) {
+    if (dragIndex === null || dragIndex === dropIndex || !editing?.id) { setDragIndex(null); return }
+    const reordered = [...images]
+    const [moved] = reordered.splice(dragIndex, 1)
+    reordered.splice(dropIndex, 0, moved)
+    setImages(reordered)
+    setDragIndex(null)
+    await Promise.all(reordered.map((img, idx) => supabase.from('product_images').update({ position: idx }).eq('id', img.id)))
   }
 
   async function handleSave() {
@@ -41,6 +197,7 @@ export default function AdminProducts() {
     if (!editing.name || !editing.price) { toast.error(t.adminRequired); return }
     setSaving(true)
     try {
+      const isNew = !editing.id
       const slug = editing.slug || editing.name!.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
       const payload = {
         name: editing.name,
@@ -48,22 +205,53 @@ export default function AdminProducts() {
         description: editing.description || '',
         price: Number(editing.price),
         category: editing.category || 'Sneakers',
-        image_url: editing.image_url || '',
-        stock: Number(editing.stock) || 0,
-        sizes: editing.sizes || [],
-        colors: editing.colors || [],
         featured: !!editing.featured,
+        sale_price: editing.sale_price === null || editing.sale_price === undefined || (editing.sale_price as any) === '' ? null : Number(editing.sale_price),
+        materials: editing.materials?.trim() ? editing.materials.trim() : null,
+        weight_grams: editing.weight_grams === null || editing.weight_grams === undefined || (editing.weight_grams as any) === '' ? null : Number(editing.weight_grams),
+        tags: editing.tags || [],
       }
-      if (editing.id) {
-        const { error } = await supabase.from('products').update(payload).eq('id', editing.id)
+
+      let productId = editing.id
+      if (productId) {
+        const { error } = await supabase.from('products').update(payload).eq('id', productId)
         if (error) throw error
-        toast.success(t.adminUpdateSuccess)
       } else {
-        const { error } = await supabase.from('products').insert(payload)
+        // stock/sizes/colors/image_url are legacy columns this form no longer
+        // edits directly; seed them so NOT NULL constraints are satisfied,
+        // the variant/image sync below fills in the real values right after.
+        const { data, error } = await supabase
+          .from('products')
+          .insert({ ...payload, stock: 0, sizes: [], colors: [], image_url: '' })
+          .select()
+          .single()
         if (error) throw error
-        toast.success(t.adminCreateSuccess)
+        productId = data.id
       }
-      setEditing(null)
+
+      await saveVariants(productId!)
+      await supabase.from('product_costs').upsert({ product_id: productId, cost_price: costPrice })
+
+      // Keep legacy products.stock/sizes/colors in sync from the variants we
+      // just wrote, so pages that still read those flat columns directly
+      // (Shop, ProductDetail, Cart) don't go stale now that variants are the
+      // real source of truth.
+      const validRows = variantRows.filter(r => r.size.trim() && r.color.trim())
+      await supabase.from('products').update({
+        stock: validRows.reduce((sum, r) => sum + (Number(r.stock) || 0), 0),
+        sizes: Array.from(new Set(validRows.map(r => r.size.trim()))),
+        colors: Array.from(new Set(validRows.map(r => r.color.trim()))),
+      }).eq('id', productId)
+
+      toast.success(isNew ? t.adminCreateSuccess : t.adminUpdateSuccess)
+      if (isNew) {
+        // Keep the modal open so photos can be added right away, now that
+        // the product has an id to attach them to.
+        setEditing(prev => (prev ? { ...prev, id: productId } : prev))
+        await Promise.all([loadImages(productId!), loadVariants(productId!)])
+      } else {
+        setEditing(null)
+      }
       load()
     } catch (e: any) {
       toast.error(e.message || t.adminRequired)
@@ -72,7 +260,7 @@ export default function AdminProducts() {
     }
   }
 
-  async function handleDelete(p: Product) {
+  async function handleDelete(p: ProductCatalogEntry) {
     if (!confirm(t.adminDeleteConfirm(p.name))) return
     const { error } = await supabase.from('products').delete().eq('id', p.id)
     if (error) { toast.error(error.message); return }
@@ -130,7 +318,7 @@ export default function AdminProducts() {
                     <td className="px-4 py-3 text-muted-foreground">{p.category}</td>
                     <td className="px-4 py-3">${Number(p.price).toFixed(0)}</td>
                     <td className="px-4 py-3">
-                      <span className={p.stock < 10 ? 'text-red-700' : ''}>{p.stock}</span>
+                      <span className={p.total_stock < 10 ? 'text-red-700' : ''}>{p.total_stock}</span>
                     </td>
                     <td className="px-4 py-3">{p.featured ? t.yes : t.dash}</td>
                     <td className="px-4 py-3 text-end">
@@ -144,7 +332,7 @@ export default function AdminProducts() {
                       <button
                         onClick={() => handleDelete(p)}
                         className="p-1.5 hover:bg-muted text-red-700 cursor-pointer"
-                        aria-label={t.adminDeleted}
+                        aria-label={t.adminDeleteProduct}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -164,7 +352,7 @@ export default function AdminProducts() {
               <h2 className="font-display text-2xl">
                 {editing.id ? t.adminEditProduct : t.adminNewProduct}
               </h2>
-              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer">
+              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -182,9 +370,6 @@ export default function AdminProducts() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <Field label={`${t.adminPrice} ($)`} type="number" value={String(editing.price || 0)} onChange={v => setEditing({ ...editing, price: Number(v) })} />
-                <Field label={t.adminStock} type="number" value={String(editing.stock || 0)} onChange={v => setEditing({ ...editing, stock: Number(v) })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminCategory}</label>
                   <select
@@ -197,10 +382,16 @@ export default function AdminProducts() {
                     ))}
                   </select>
                 </div>
-                <Field label="Image URL" value={editing.image_url || ''} onChange={v => setEditing({ ...editing, image_url: v })} />
               </div>
-              <Field label="Colors (comma separated)" value={(editing.colors || []).join(', ')} onChange={v => setEditing({ ...editing, colors: v.split(',').map(s => s.trim()).filter(Boolean) })} />
-              <Field label="Sizes (comma separated)" value={(editing.sizes || []).join(', ')} onChange={v => setEditing({ ...editing, sizes: v.split(',').map(s => s.trim()).filter(Boolean) })} />
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Cost Price ($)" type="number" value={costPrice != null ? String(costPrice) : ''} onChange={v => setCostPrice(v === '' ? null : Number(v))} />
+                <Field label="Sale Price ($)" type="number" value={editing.sale_price != null ? String(editing.sale_price) : ''} onChange={v => setEditing({ ...editing, sale_price: v === '' ? null : Number(v) })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Materials" value={editing.materials || ''} onChange={v => setEditing({ ...editing, materials: v })} />
+                <Field label="Weight (grams)" type="number" value={editing.weight_grams != null ? String(editing.weight_grams) : ''} onChange={v => setEditing({ ...editing, weight_grams: v === '' ? null : Number(v) })} />
+              </div>
+              <Field label="Tags (comma separated)" value={(editing.tags || []).join(', ')} onChange={v => setEditing({ ...editing, tags: v.split(',').map(s => s.trim()).filter(Boolean) })} />
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -210,6 +401,93 @@ export default function AdminProducts() {
                 />
                 <span className="text-sm">{t.adminFeaturedCheckbox}</span>
               </label>
+
+              {/* --- Photo gallery --- */}
+              <div className="pt-2 border-t border-border">
+                <div className="flex items-center justify-between mb-2 mt-4">
+                  <span className="block text-xs tracking-widest uppercase text-muted-foreground">Photos</span>
+                  {editing.id ? (
+                    <label className={`text-xs underline ${uploading ? 'opacity-50' : 'cursor-pointer'}`}>
+                      {uploading ? 'Uploading…' : '+ Upload images'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        disabled={uploading}
+                        onChange={e => { handleUpload(e.target.files); e.target.value = '' }}
+                      />
+                    </label>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Save the product first to add photos</span>
+                  )}
+                </div>
+                {images.length > 0 && (
+                  <div className="flex flex-wrap gap-3">
+                    {images.map((img, idx) => (
+                      <div
+                        key={img.id}
+                        draggable
+                        onDragStart={() => setDragIndex(idx)}
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={() => handleDropImage(idx)}
+                        className="relative w-20 h-20 border border-border cursor-move group flex-shrink-0"
+                        title="Drag to reorder"
+                      >
+                        <img src={img.url} alt="" className="w-full h-full object-cover" />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-foreground/70 px-1 py-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleSetFeatured(img)}
+                            className="cursor-pointer"
+                            aria-label="Set featured"
+                            title="Set featured"
+                          >
+                            <Star className={`w-3.5 h-3.5 ${img.is_featured ? 'fill-yellow-400 text-yellow-400' : 'text-background'}`} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteImage(img)}
+                            className="cursor-pointer"
+                            aria-label="Delete image"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-background" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* --- Variants --- */}
+              <div className="pt-2 border-t border-border">
+                <div className="flex items-center justify-between mb-2 mt-4">
+                  <span className="block text-xs tracking-widest uppercase text-muted-foreground">Variants</span>
+                  <button type="button" onClick={addVariantRow} className="text-xs underline cursor-pointer">+ Add row</button>
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[640px] space-y-2">
+                    <div className="grid grid-cols-[1fr_1fr_4.5rem_1fr_1fr_6rem_1.5rem] gap-2 text-[10px] tracking-widest uppercase text-muted-foreground">
+                      <span>Size</span><span>Color</span><span>Stock</span><span>SKU</span><span>Barcode</span><span>Price override</span><span />
+                    </div>
+                    {variantRows.map(row => (
+                      <div key={row._key} className="grid grid-cols-[1fr_1fr_4.5rem_1fr_1fr_6rem_1.5rem] gap-2 items-center">
+                        <input value={row.size} onChange={e => updateVariantRow(row._key, 'size', e.target.value)} className="w-full bg-transparent border border-border px-2 py-1.5 text-sm focus:border-foreground outline-none" />
+                        <input value={row.color} onChange={e => updateVariantRow(row._key, 'color', e.target.value)} className="w-full bg-transparent border border-border px-2 py-1.5 text-sm focus:border-foreground outline-none" />
+                        <input type="number" value={row.stock} onChange={e => updateVariantRow(row._key, 'stock', Number(e.target.value) || 0)} className="w-full bg-transparent border border-border px-2 py-1.5 text-sm focus:border-foreground outline-none" />
+                        <input value={row.sku} onChange={e => updateVariantRow(row._key, 'sku', e.target.value)} className="w-full bg-transparent border border-border px-2 py-1.5 text-sm focus:border-foreground outline-none" />
+                        <input value={row.barcode} onChange={e => updateVariantRow(row._key, 'barcode', e.target.value)} className="w-full bg-transparent border border-border px-2 py-1.5 text-sm focus:border-foreground outline-none" />
+                        <input type="number" value={row.price_override} onChange={e => updateVariantRow(row._key, 'price_override', e.target.value)} className="w-full bg-transparent border border-border px-2 py-1.5 text-sm focus:border-foreground outline-none" />
+                        <button type="button" onClick={() => removeVariantRow(row._key)} className="p-1 text-red-700 cursor-pointer" aria-label="Remove row">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="p-6 border-t border-border flex items-center justify-end gap-3 sticky bottom-0 bg-background">
               <button
