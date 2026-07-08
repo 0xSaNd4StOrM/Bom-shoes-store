@@ -42,7 +42,7 @@ export default function AdminBundles() {
   const [itemRows, setItemRows] = useState<ItemRow[]>([])
   const [saving, setSaving] = useState(false)
   const { isAdmin } = useAuth()
-  const { formatPrice } = useCurrency()
+  const { formatPrice, currency } = useCurrency()
 
   async function load() {
     setLoading(true)
@@ -261,7 +261,7 @@ export default function AdminBundles() {
                   </select>
                 </div>
                 <Field
-                  label={editing.discount_type === 'percentage' ? 'Discount (%)' : 'Discount ($)'}
+                  label={editing.discount_type === 'percentage' ? 'Discount (%)' : `Discount (${currency})`}
                   type="number"
                   value={String(editing.discount_value ?? 0)}
                   onChange={v => setEditing({ ...editing, discount_value: Number(v) })}

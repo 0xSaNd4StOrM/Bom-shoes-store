@@ -68,7 +68,7 @@ export default function AdminCoupons() {
   const [editing, setEditing] = useState<Partial<Coupon> | null>(null)
   const [saving, setSaving] = useState(false)
   const { isAdmin } = useAuth()
-  const { formatPrice } = useCurrency()
+  const { formatPrice, currency } = useCurrency()
 
   async function load() {
     setLoading(true)
@@ -290,7 +290,7 @@ export default function AdminCoupons() {
                   </select>
                 </div>
                 <Field
-                  label={editing.discount_type === 'percentage' ? 'Discount (%)' : 'Discount ($)'}
+                  label={editing.discount_type === 'percentage' ? 'Discount (%)' : `Discount (${currency})`}
                   type="number"
                   value={String(editing.discount_value ?? 0)}
                   onChange={v => setEditing({ ...editing, discount_value: Number(v) })}
@@ -307,8 +307,8 @@ export default function AdminCoupons() {
               )}
 
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Min order amount ($)" type="number" value={editing.min_order_amount != null ? String(editing.min_order_amount) : ''} onChange={v => setEditing({ ...editing, min_order_amount: v === '' ? null : Number(v) })} />
-                <Field label="Max discount amount ($)" type="number" value={editing.max_discount_amount != null ? String(editing.max_discount_amount) : ''} onChange={v => setEditing({ ...editing, max_discount_amount: v === '' ? null : Number(v) })} />
+                <Field label={`Min order amount (${currency})`} type="number" value={editing.min_order_amount != null ? String(editing.min_order_amount) : ''} onChange={v => setEditing({ ...editing, min_order_amount: v === '' ? null : Number(v) })} />
+                <Field label={`Max discount amount (${currency})`} type="number" value={editing.max_discount_amount != null ? String(editing.max_discount_amount) : ''} onChange={v => setEditing({ ...editing, max_discount_amount: v === '' ? null : Number(v) })} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

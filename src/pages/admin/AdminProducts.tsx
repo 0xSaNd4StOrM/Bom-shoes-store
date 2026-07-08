@@ -63,7 +63,7 @@ export default function AdminProducts() {
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const { isAdmin } = useAuth()
   const t = useT()
-  const { formatPrice } = useCurrency()
+  const { formatPrice, currency } = useCurrency()
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -446,7 +446,7 @@ export default function AdminProducts() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Field label={`${t.adminPrice} ($)`} type="number" value={String(editing.price || 0)} onChange={v => setEditing({ ...editing, price: Number(v) })} />
+                <Field label={`${t.adminPrice} (${currency})`} type="number" value={String(editing.price || 0)} onChange={v => setEditing({ ...editing, price: Number(v) })} />
                 <div>
                   <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminCategory}</label>
                   <select
@@ -461,8 +461,8 @@ export default function AdminProducts() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Cost Price ($)" type="number" value={costPrice != null ? String(costPrice) : ''} onChange={v => setCostPrice(v === '' ? null : Number(v))} />
-                <Field label="Sale Price ($)" type="number" value={editing.sale_price != null ? String(editing.sale_price) : ''} onChange={v => setEditing({ ...editing, sale_price: v === '' ? null : Number(v) })} />
+                <Field label={`Cost Price (${currency})`} type="number" value={costPrice != null ? String(costPrice) : ''} onChange={v => setCostPrice(v === '' ? null : Number(v))} />
+                <Field label={`Sale Price (${currency})`} type="number" value={editing.sale_price != null ? String(editing.sale_price) : ''} onChange={v => setEditing({ ...editing, sale_price: v === '' ? null : Number(v) })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Materials" value={editing.materials || ''} onChange={v => setEditing({ ...editing, materials: v })} />
