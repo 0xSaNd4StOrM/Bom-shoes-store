@@ -83,7 +83,8 @@ export default function AdminDashboard() {
         supabase.from('product_catalog').select('*'),
       ])
 
-      const revenue = (orders || []).reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
+      const paidOrders = (orders || []).filter(o => o.payment_status === 'paid')
+      const revenue = paidOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
       setStats({
         revenue,
         orders: (orders || []).length,
@@ -92,8 +93,8 @@ export default function AdminDashboard() {
       })
       setRecentOrders((orders || []).sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5))
       setTopProducts((products || []).sort((a, b) => (b.total_stock < 10 ? 1 : 0) - (a.total_stock < 10 ? 1 : 0)).slice(0, 5))
-      setRevenueChart(revenueByDay(orders || []))
-      setSellersChart(bestSellers(orders || []))
+      setRevenueChart(revenueByDay(paidOrders))
+      setSellersChart(bestSellers(paidOrders))
       setLoading(false)
     }
     load()
