@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase, Profile } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
-import { Loader2, ChevronDown } from 'lucide-react'
+import { Loader2, ChevronDown, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 const ROLE_VALUES = ['customer', 'admin']
@@ -10,8 +10,18 @@ const ROLE_VALUES = ['customer', 'admin']
 export default function AdminUsers() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const { profile: me, isAdmin } = useAuth()
   const t = useT()
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return profiles
+    return profiles.filter(p =>
+      (p.email || '').toLowerCase().includes(q) ||
+      (p.full_name || '').toLowerCase().includes(q)
+    )
+  }, [profiles, search])
 
   async function load() {
     setLoading(true)
@@ -34,7 +44,18 @@ export default function AdminUsers() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <p className="text-sm text-muted-foreground">{profiles.length} {profiles.length === 1 ? t.piece : t.pieces}</p>
+        <p className="text-sm text-muted-foreground">{filtered.length} {filtered.length === 1 ? t.piece : t.pieces}</p>
+      </div>
+
+      <div className="relative mb-4 max-w-sm">
+        <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={t.adminSearchUsers}
+          className="w-full bg-transparent border border-border ps-9 pe-3 py-2 text-sm focus:border-foreground outline-none"
+        />
       </div>
 
       {loading ? (
@@ -54,7 +75,7 @@ export default function AdminUsers() {
                 </tr>
               </thead>
               <tbody>
-                {profiles.map(p => {
+                {filtered.map(p => {
                   const isSelf = p.id === me?.id
                   return (
                     <tr key={p.id} className="border-t border-border hover:bg-muted/20">
