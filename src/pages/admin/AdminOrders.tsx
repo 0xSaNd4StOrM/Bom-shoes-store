@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { supabase, Order } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
@@ -28,6 +28,7 @@ export default function AdminOrders() {
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const { isAdmin } = useAuth()
   const t = useT()
   const { formatPrice } = useCurrency()
@@ -164,9 +165,16 @@ export default function AdminOrders() {
               </thead>
               <tbody>
                 {filtered.map(o => (
-                  <tr key={o.id} className="border-t border-border hover:bg-muted/20">
+                  <Fragment key={o.id}>
+                  <tr
+                    className="border-t border-border hover:bg-muted/20 cursor-pointer"
+                    onClick={() => setExpandedId(id => (id === o.id ? null : o.id))}
+                  >
                     <td className="px-4 py-4 font-mono text-xs text-muted-foreground">
-                      {o.kashier_order_id || o.id.slice(0, 8)}
+                      <span className="inline-flex items-center gap-1.5">
+                        {expandedId === o.id ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />}
+                        {o.kashier_order_id || o.id.slice(0, 8)}
+                      </span>
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-medium">{o.customer_name || t.dash}</p>
@@ -190,7 +198,7 @@ export default function AdminOrders() {
                         {statusLabel(o.payment_status)}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
                       {isAdmin ? (
                         <div className="relative inline-block">
                           <select
@@ -209,6 +217,58 @@ export default function AdminOrders() {
                       )}
                     </td>
                   </tr>
+                  {expandedId === o.id && (
+                    <tr className="border-t border-border bg-muted/10">
+                      <td colSpan={7} className="px-4 py-5">
+                        <div className="grid gap-6 sm:grid-cols-[1.5fr_1fr]">
+                          <div>
+                            <p className="text-xs tracking-widest uppercase text-muted-foreground mb-3">{t.adminItems}</p>
+                            <div className="space-y-3">
+                              {Array.isArray(o.items) && o.items.map((item: any, i: number) => (
+                                <div key={i} className="flex items-center gap-3">
+                                  <div className="w-12 h-12 bg-muted overflow-hidden shrink-0">
+                                    {item.image_url && <img src={item.image_url} alt="" className="w-full h-full object-cover" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{item.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {[item.color, item.size].filter(Boolean).join(' · ')} {item.quantity ? `× ${item.quantity}` : ''}
+                                    </p>
+                                  </div>
+                                  <p className="text-sm font-medium whitespace-nowrap">
+                                    {formatPrice(Number(item.price || 0) * Number(item.quantity || 1))}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-xs tracking-widest uppercase text-muted-foreground mb-1">{t.fieldAddress}</p>
+                              <p className="text-sm">{o.shipping_address || t.dash}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs tracking-widest uppercase text-muted-foreground mb-1">{t.fieldPhone}</p>
+                              {o.customer_phone ? (
+                                <a href={`tel:${o.customer_phone}`} className="text-sm hover:text-muted-foreground transition-colors">{o.customer_phone}</a>
+                              ) : (
+                                <p className="text-sm">{t.dash}</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs tracking-widest uppercase text-muted-foreground mb-1">{t.fieldEmail}</p>
+                              {o.customer_email ? (
+                                <a href={`mailto:${o.customer_email}`} className="text-sm hover:text-muted-foreground transition-colors">{o.customer_email}</a>
+                              ) : (
+                                <p className="text-sm">{t.dash}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
