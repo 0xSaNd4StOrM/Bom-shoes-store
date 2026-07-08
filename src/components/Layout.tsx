@@ -4,11 +4,24 @@ import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage, useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
-import { ShoppingBag, User, Menu, X, LogOut, LayoutDashboard, Globe, ChevronDown, Search } from 'lucide-react'
+import { ShoppingBag, User, Menu, X, LogOut, LayoutDashboard, Globe, ChevronDown, Search, Instagram, Facebook, Share2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase, ProductCatalogEntry } from '@/lib/supabase'
 import Logo from './Logo'
 import WhatsAppButton from './WhatsAppButton'
+
+type NewsletterContent = { title_en: string; title_ar: string; subtitle_en: string; subtitle_ar: string }
+type ContactContent = {
+  email: string | null
+  phone: string | null
+  address_en: string | null
+  address_ar: string | null
+  map_url: string | null
+  social_instagram: string | null
+  social_facebook: string | null
+  social_tiktok: string | null
+  social_twitter: string | null
+}
 
 type SearchHit = Pick<ProductCatalogEntry, 'id' | 'slug' | 'name' | 'min_price' | 'image_url'>
 
@@ -39,6 +52,8 @@ export default function Layout() {
   const [suggestions, setSuggestions] = useState<SearchHit[]>([])
   const [searching, setSearching] = useState(false)
   const [history, setHistory] = useState<string[]>(() => loadSearchHistory())
+  const [newsletterContent, setNewsletterContent] = useState<NewsletterContent | null>(null)
+  const [contactContent, setContactContent] = useState<ContactContent | null>(null)
   const navigate = useNavigate()
   const langRef = useRef<HTMLDivElement>(null)
   const userRef = useRef<HTMLDivElement>(null)
@@ -76,6 +91,24 @@ export default function Layout() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [searchOpen])
+
+  // Footer newsletter heading/subtitle + contact/social info -- both admin-
+  // editable via site_content, fetched once in a single round trip.
+  useEffect(() => {
+    supabase
+      .from('site_content')
+      .select('key, value')
+      .in('key', ['newsletter', 'contact'])
+      .then(
+        ({ data }) => {
+          for (const row of data || []) {
+            if (row.key === 'newsletter') setNewsletterContent(row.value as NewsletterContent)
+            if (row.key === 'contact') setContactContent(row.value as ContactContent)
+          }
+        },
+        () => { /* keep footer fallbacks */ }
+      )
+  }, [])
 
   // Move focus into the panel on open, and back to the toggle button on
   // close -- however it closes (Escape, click-outside, the X, or committing
@@ -520,12 +553,16 @@ export default function Layout() {
                 <li><a href="#" className="hover:text-background transition-colors">{t.footerOurStory}</a></li>
                 <li><a href="#" className="hover:text-background transition-colors">{t.footerCraftsmanship}</a></li>
                 <li><a href="#" className="hover:text-background transition-colors">{t.footerCare}</a></li>
-                <li><a href="#" className="hover:text-background transition-colors">{t.footerContact}</a></li>
               </ul>
+              <FooterContact contact={contactContent} lang={lang} label={t.footerContact} />
             </div>
             <div className="md:col-span-3">
-              <h4 className="text-[11px] tracking-[0.25em] uppercase font-medium mb-6 text-background/90">Newsletter</h4>
-              <p className="text-sm font-light text-background/70 mb-4 leading-relaxed">{t.homeNewsletterDesc}</p>
+              <h4 className="text-[11px] tracking-[0.25em] uppercase font-medium mb-6 text-background/90">
+                {(lang === 'ar' ? newsletterContent?.title_ar : newsletterContent?.title_en) || t.homeNewsletterTitle}
+              </h4>
+              <p className="text-sm font-light text-background/70 mb-4 leading-relaxed">
+                {(lang === 'ar' ? newsletterContent?.subtitle_ar : newsletterContent?.subtitle_en) || t.homeNewsletterDesc}
+              </p>
               <div className="flex gap-2">
                 <input
                   type="email"
@@ -554,6 +591,58 @@ export default function Layout() {
 
       {/* Floating WhatsApp */}
       <WhatsAppButton />
+    </div>
+  )
+}
+
+// Renders only the contact/social fields an admin has actually filled in --
+// with every field null (today's seeded state) this returns null, so no
+// empty heading or broken links show up in the footer.
+function FooterContact({
+  contact,
+  lang,
+  label,
+}: {
+  contact: ContactContent | null
+  lang: string
+  label: string
+}) {
+  if (!contact) return null
+  const address = lang === 'ar' ? contact.address_ar : contact.address_en
+  const socials = [
+    contact.social_instagram && { url: contact.social_instagram, Icon: Instagram, name: 'Instagram' },
+    contact.social_facebook && { url: contact.social_facebook, Icon: Facebook, name: 'Facebook' },
+    contact.social_tiktok && { url: contact.social_tiktok, Icon: Share2, name: 'TikTok' },
+    contact.social_twitter && { url: contact.social_twitter, Icon: Share2, name: 'X' },
+  ].filter(Boolean) as { url: string; Icon: typeof Instagram; name: string }[]
+
+  const hasAnything = contact.email || contact.phone || address || contact.map_url || socials.length > 0
+  if (!hasAnything) return null
+
+  return (
+    <div className="mt-8 space-y-3 text-sm font-light text-background/70">
+      <h5 className="text-[11px] tracking-[0.25em] uppercase font-medium text-background/90">{label}</h5>
+      {contact.email && (
+        <a href={`mailto:${contact.email}`} className="block hover:text-background transition-colors">{contact.email}</a>
+      )}
+      {contact.phone && (
+        <a href={`tel:${contact.phone}`} className="block hover:text-background transition-colors">{contact.phone}</a>
+      )}
+      {address && <p>{address}</p>}
+      {contact.map_url && (
+        <a href={contact.map_url} target="_blank" rel="noopener noreferrer" className="block underline hover:text-background transition-colors">
+          {lang === 'ar' ? 'عرض على الخريطة' : 'View on map'}
+        </a>
+      )}
+      {socials.length > 0 && (
+        <div className="flex items-center gap-3 pt-1">
+          {socials.map(({ url, Icon, name }) => (
+            <a key={name} href={url} target="_blank" rel="noopener noreferrer" aria-label={name} className="hover:text-background transition-colors">
+              <Icon className="w-4 h-4" />
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

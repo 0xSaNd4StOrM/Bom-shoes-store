@@ -1,67 +1,87 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { useT } from '@/contexts/LanguageContext'
+import { useT, useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { supabase, ProductCatalogEntry } from '@/lib/supabase'
 
 /**
  * Sticky 3D scroll showcase with transparent-background shoes.
  * As the user scrolls the page, the active shoe image transitions,
  * rotates and floats in 3D space.
+ *
+ * Data comes from the real product catalog (admin-curated via the
+ * `site_content` row key='showcase', or a featured/recent fallback pool --
+ * same pattern Home.tsx uses) -- never hardcoded fake products/prices.
  */
-const SHOES = [
-  {
-    src: '/shoes/cloudwalker.webp',
-    name: 'The Cloudwalker',
-    enTitle: 'Cloudwalker',
-    arTitle: 'كلاود ووكر',
-    price: '$420',
-    color: '#F8F4ED',
-  },
-  {
-    src: '/shoes/atlas-loafer.webp',
-    name: 'The Atlas Loafer',
-    enTitle: 'Atlas Loafer',
-    arTitle: 'أطلس لوفر',
-    price: '$380',
-    color: '#C9A98F',
-  },
-  {
-    src: '/shoes/atlas-boot.webp',
-    name: 'The Atlas Boot',
-    enTitle: 'Atlas Boot',
-    arTitle: 'أطلس بوت',
-    price: '$520',
-    color: '#1F1B16',
-  },
-  {
-    src: '/shoes/marina-derby.webp',
-    name: 'The Marina Derby',
-    enTitle: 'Marina Derby',
-    arTitle: 'مارينا ديربي',
-    price: '$395',
-    color: '#1E2A4A',
-  },
-  {
-    src: '/shoes/drift-runner.webp',
-    name: 'The Drift Runner',
-    enTitle: 'Drift Runner',
-    arTitle: 'دريفت رانر',
-    price: '$340',
-    color: '#EDE6D6',
-  },
-  {
-    src: '/shoes/dune-boot.webp',
-    name: 'The Dune Boot',
-    enTitle: 'Dune Boot',
-    arTitle: 'دون بوت',
-    price: '$460',
-    color: '#A57C52',
-  },
-]
+type ShowcaseItem = {
+  src: string
+  enTitle: string
+  minPrice: number
+  slug: string
+}
+
+// Static tint since real products don't carry a "brand color" field --
+// ponytail: one neutral tint for all slides, add per-product color if design wants it back.
+const GLOW_COLOR = '#C9A98F'
 
 export default function ShoeShowcase3D() {
   const t = useT()
+  const { lang } = useLanguage()
+  const { formatPrice } = useCurrency()
   const sectionRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
   const [scrollProgress, setScrollProgress] = useState(0)
+  const [items, setItems] = useState<ShowcaseItem[] | null>(null)
+  const [labels, setLabels] = useState<{ en: string; ar: string } | null>(null)
+
+  // Fetch admin-curated showcase products (site_content key='showcase'), or
+  // fall back to the featured/recent pool -- same fallback Home.tsx uses so
+  // the homepage is never empty/broken on a fresh catalog.
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const { data: content } = await supabase
+        .from('site_content')
+        .select('value')
+        .eq('key', 'showcase')
+        .maybeSingle()
+
+      const value = (content?.value || {}) as { product_ids?: string[]; label_en?: string; label_ar?: string }
+      const productIds = value.product_ids ?? []
+
+      let products: ProductCatalogEntry[] = []
+      if (productIds.length > 0) {
+        const { data } = await supabase.from('product_catalog').select('*').in('id', productIds)
+        const byId = new Map((data || []).map(p => [p.id, p]))
+        products = productIds.map(id => byId.get(id)).filter((p): p is ProductCatalogEntry => !!p)
+      } else {
+        const { data: featured } = await supabase
+          .from('product_catalog')
+          .select('*')
+          .eq('featured', true)
+          .order('created_at', { ascending: false })
+          .limit(6)
+        const { data: recent } = await supabase
+          .from('product_catalog')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(6)
+        products = (featured && featured.length > 0 ? featured : recent) || []
+      }
+
+      if (cancelled) return
+      setItems(products.map(p => ({
+        src: p.image_url || '',
+        enTitle: p.name,
+        minPrice: p.min_price,
+        slug: p.slug,
+      })))
+      if (value.label_en || value.label_ar) {
+        setLabels({ en: value.label_en || '', ar: value.label_ar || '' })
+      }
+    }
+    load().catch(() => { if (!cancelled) setItems([]) })
+    return () => { cancelled = true }
+  }, [])
 
   // Section top offset + scrollable height, read from the DOM once (mount + resize)
   // instead of on every scroll tick — keeps the scroll handler free of layout reads.
@@ -70,7 +90,11 @@ export default function ShoeShowcase3D() {
   const resizeTickingRef = useRef(false)
   const reducedMotionRef = useRef(false)
 
+  const itemCount = items?.length ?? 0
+
   useEffect(() => {
+    if (itemCount === 0) return
+
     reducedMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     function measure() {
@@ -88,7 +112,7 @@ export default function ShoeShowcase3D() {
       const scrolled = window.scrollY - sectionTop
       const progress = Math.max(0, Math.min(1, scrolled / sectionHeight))
       setScrollProgress(progress)
-      setActive(Math.min(SHOES.length - 1, Math.floor(progress * SHOES.length)))
+      setActive(Math.min(itemCount - 1, Math.floor(progress * itemCount)))
     }
 
     // Batch to one update per animation frame no matter how many scroll events fire.
@@ -119,32 +143,38 @@ export default function ShoeShowcase3D() {
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onResize)
     }
-  }, [])
+  }, [itemCount])
 
-  const current = SHOES[active]
+  // Loading (fetch in flight) or genuinely empty catalog -- render nothing
+  // rather than fake placeholder products, same graceful-degradation as the
+  // homepage's hero banners.
+  if (!items || items.length === 0) return null
+
+  const current = items[active]
+  const eyebrow = labels ? (lang === 'ar' ? labels.ar : labels.en) : t.showcaseEyebrow
   const reducedMotion = reducedMotionRef.current
   // Continuous scroll position (0..N) used to drive the bottom-to-top slide
-  const rawPos = scrollProgress * SHOES.length
+  const rawPos = scrollProgress * itemCount
   const floatY = reducedMotion ? 0 : Math.sin(scrollProgress * Math.PI * 3) * 24
 
   return (
     <section
       ref={sectionRef}
       className="relative bg-[#0A0907] text-white"
-      style={{ height: `${SHOES.length * 100}vh` }}
+      style={{ height: `${itemCount * 100}vh` }}
     >
       <div className="sticky top-0 h-screen flex items-center justify-center overflow-hidden">
         {/* Subtle background gradient that shifts */}
         <div
           className="absolute inset-0 transition-all duration-1000"
           style={{
-            background: `radial-gradient(circle at 50% 50%, ${current.color}33 0%, #0A0907 60%)`,
+            background: `radial-gradient(circle at 50% 50%, ${GLOW_COLOR}33 0%, #0A0907 60%)`,
           }}
         />
 
         {/* Decorative index counter */}
         <div className="absolute top-10 left-10 right-10 flex items-center justify-between text-xs tracking-[0.3em] uppercase font-light opacity-80 text-shadow-sm">
-          <span>0{active + 1} / 0{SHOES.length}</span>
+          <span>0{active + 1} / 0{itemCount}</span>
           <span>{t.showcaseLabel}</span>
         </div>
 
@@ -158,7 +188,7 @@ export default function ShoeShowcase3D() {
 
         {/* Shoes slide in from the bottom and exit through the top */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          {SHOES.map((s, i) => {
+          {items.map((s, i) => {
             // diff > 0 → this shoe has already scrolled past (move it upward / off the top)
             // diff < 0 → this shoe hasn't appeared yet (park it below)
             const diff = rawPos - i
@@ -209,7 +239,7 @@ export default function ShoeShowcase3D() {
               className="text-xs tracking-[0.3em] uppercase font-light opacity-80 mb-3 text-shadow-sm"
               style={{ animation: 'fadeUp 600ms 100ms ease-out both' }}
             >
-              {t.showcaseEyebrow}
+              {eyebrow}
             </p>
             <h3
               key={`t-${active}`}
@@ -223,7 +253,7 @@ export default function ShoeShowcase3D() {
               className="text-2xl font-light opacity-95 mb-6 text-shadow"
               style={{ animation: 'fadeUp 600ms 300ms ease-out both' }}
             >
-              {current.price}
+              {formatPrice(current.minPrice)}
             </p>
             <p
               key={`d-${active}`}
@@ -233,7 +263,7 @@ export default function ShoeShowcase3D() {
               {t.showcaseDesc}
             </p>
             <a
-              href={`/product/${shoeSlug(current.enTitle)}`}
+              href={`/product/${current.slug}`}
               className="group pointer-events-auto inline-flex items-center gap-2 text-sm tracking-wider border-b border-white/70 pb-1 hover:border-white transition-colors text-shadow-sm"
               style={{ animation: 'fadeUp 600ms 500ms ease-out both' }}
             >
@@ -245,7 +275,7 @@ export default function ShoeShowcase3D() {
 
         {/* Side dots navigation */}
         <div className="absolute end-6 top-1/2 -translate-y-1/2 flex flex-col gap-3">
-          {SHOES.map((_, i) => (
+          {items.map((_, i) => (
             <button
               key={i}
               onClick={() => {
@@ -254,7 +284,7 @@ export default function ShoeShowcase3D() {
                 const rect = el.getBoundingClientRect()
                 const sectionTop = window.scrollY + rect.top
                 const sectionHeight = el.offsetHeight - window.innerHeight
-                const target = sectionTop + (i / SHOES.length) * sectionHeight + 50
+                const target = sectionTop + (i / itemCount) * sectionHeight + 50
                 window.scrollTo({ top: target, behavior: 'smooth' })
               }}
               aria-label={`Go to slide ${i + 1}`}
@@ -277,8 +307,4 @@ export default function ShoeShowcase3D() {
       </div>
     </section>
   )
-}
-
-function shoeSlug(name: string) {
-  return name.toLowerCase().replace(/\s+/g, '-')
 }

@@ -19,6 +19,7 @@ import AdminOrders from './pages/admin/AdminOrders'
 import AdminCoupons from './pages/admin/AdminCoupons'
 import AdminBundles from './pages/admin/AdminBundles'
 import AdminBanners from './pages/admin/AdminBanners'
+import AdminHomepage from './pages/admin/AdminHomepage'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminActivityLog from './pages/admin/AdminActivityLog'
 import AdminSettings from './pages/admin/AdminSettings'
@@ -68,6 +69,7 @@ function App() {
           <Route path="coupons" element={<AdminCoupons />} />
           <Route path="bundles" element={<AdminBundles />} />
           <Route path="banners" element={<AdminBanners />} />
+          <Route path="homepage" element={<AdminHomepage />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="activity" element={<AdminActivityLog />} />
           <Route path="settings" element={<AdminSettings />} />

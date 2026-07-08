@@ -6,7 +6,7 @@ import { useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useSeo } from '@/hooks/useSeo'
 import { supabase, Order } from '@/lib/supabase'
-import { Package, LayoutDashboard, ListOrdered, Tag, LogOut, Image, Users, History, Settings, Gift } from 'lucide-react'
+import { Package, LayoutDashboard, ListOrdered, Tag, LogOut, Image, Users, History, Settings, Gift, PanelTop } from 'lucide-react'
 
 // Shared chrome (header + nav tabs) for every /admin/* screen. Nested under
 // a single <Route path="/admin"> in App.tsx so this renders once and each
@@ -77,6 +77,7 @@ export default function AdminLayout() {
     { to: '/admin/coupons', label: t.adminNavCoupons, icon: Tag },
     { to: '/admin/bundles', label: t.adminNavBundles, icon: Gift },
     { to: '/admin/banners', label: t.adminNavBanners, icon: Image },
+    { to: '/admin/homepage', label: t.adminNavHomepage, icon: PanelTop },
     { to: '/admin/users', label: t.adminNavUsers, icon: Users },
     { to: '/admin/activity', label: t.adminNavActivity, icon: History },
     { to: '/admin/settings', label: t.adminNavSettings, icon: Settings },

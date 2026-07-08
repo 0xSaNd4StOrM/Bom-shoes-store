@@ -225,6 +225,31 @@ export type HeroBanner = {
 // can insert/update/delete rows here directly (no RLS write policy exists
 // for any role). actor_id is null for writes made by a service-role edge
 // function (e.g. fulfill_order's own order updates).
+// Homepage CMS copy, keyed by section (hero/showcase/curated/limited_drop/
+// trust_badges/atelier) -- public SELECT, admin-only write. `value` shape
+// varies per key; see AdminHomepage.tsx for the per-key field lists.
+export type SiteContent = {
+  key: string
+  value: any
+  updated_at: string
+}
+
+// Homepage social-proof quotes. Public SELECT is RLS-restricted to
+// active=true (same convention as HeroBanner); insert/update/delete is
+// admin-only. Ordered by `position` (same reorder pattern as hero_banners).
+export type Testimonial = {
+  id: string
+  author_name: string
+  author_title: string | null
+  quote_en: string
+  quote_ar: string
+  rating: number | null
+  avatar_url: string | null
+  position: number
+  active: boolean
+  created_at: string
+}
+
 export type ActivityLog = {
   id: string
   action: string
