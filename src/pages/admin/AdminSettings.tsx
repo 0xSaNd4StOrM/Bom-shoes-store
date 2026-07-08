@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase, StoreSettings } from '@/lib/supabase'
 import { useCategories } from '@/contexts/CategoriesContext'
+import { useT } from '@/contexts/LanguageContext'
 import { Loader2, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
 import { toast } from 'sonner'
+
+type Translations = ReturnType<typeof useT>
 
 // Singleton row id -- see supabase/migrations/20260704008000_store_settings_realtime.sql.
 // Always read/write this exact id; never a bare insert.
@@ -44,6 +47,7 @@ export default function AdminSettings() {
   const [newLabelEn, setNewLabelEn] = useState('')
   const [newLabelAr, setNewLabelAr] = useState('')
   const [savingCategory, setSavingCategory] = useState(false)
+  const t = useT()
 
   async function load() {
     setLoading(true)
@@ -82,8 +86,8 @@ export default function AdminSettings() {
       .update({ value: whatsapp })
       .eq('key', 'whatsapp')
     setSavingWhatsapp(false)
-    if (error) { toast.error(error.message || 'Save failed'); return }
-    toast.success('Saved')
+    if (error) { toast.error(error.message || t.adminSaveFailed); return }
+    toast.success(t.adminSaved)
   }
 
   async function handleSaveContact() {
@@ -99,8 +103,8 @@ export default function AdminSettings() {
       .update({ value })
       .eq('key', 'contact')
     setSavingContact(false)
-    if (error) { toast.error(error.message || 'Save failed'); return }
-    toast.success('Saved')
+    if (error) { toast.error(error.message || t.adminSaveFailed); return }
+    toast.success(t.adminSaved)
   }
 
   // UPDATE the seeded singleton, never upsert -- same RLS reason as the logo/
@@ -111,8 +115,8 @@ export default function AdminSettings() {
       .from('store_settings')
       .update({ currency })
       .eq('id', STORE_SETTINGS_ID)
-    if (error) { toast.error(error.message || 'Save failed'); return }
-    toast.success('Saved')
+    if (error) { toast.error(error.message || t.adminSaveFailed); return }
+    toast.success(t.adminSaved)
   }
 
   async function handleUpload(field: UploadField, file: File | undefined, setUploading: (v: boolean) => void) {
@@ -135,9 +139,9 @@ export default function AdminSettings() {
         .eq('id', STORE_SETTINGS_ID)
       if (dbErr) throw dbErr
       setSettings(prev => ({ ...(prev || { logo_url: null, favicon_url: null, currency: 'EGP' }), [field]: pub.publicUrl }))
-      toast.success('Saved')
+      toast.success(t.adminSaved)
     } catch (e: any) {
-      toast.error(e.message || 'Upload failed')
+      toast.error(e.message || t.adminUploadFailed)
     } finally {
       setUploading(false)
     }
@@ -146,23 +150,23 @@ export default function AdminSettings() {
   async function handleAddCategory() {
     const label_en = newLabelEn.trim()
     const label_ar = newLabelAr.trim()
-    if (!label_en || !label_ar) { toast.error('Both English and Arabic names are required'); return }
+    if (!label_en || !label_ar) { toast.error(t.adminBothNamesRequired); return }
     setSavingCategory(true)
     const position = categories.length ? Math.max(...categories.map(c => c.position)) + 1 : 0
     const { error } = await supabase
       .from('categories')
       .insert({ value: label_en, label_en, label_ar, position })
     setSavingCategory(false)
-    if (error) { toast.error(error.message || 'Could not add category'); return }
+    if (error) { toast.error(error.message || t.adminCouldNotAddCategory); return }
     setNewLabelEn('')
     setNewLabelAr('')
-    toast.success('Category added')
+    toast.success(t.adminCategoryAdded)
     reloadCategories()
   }
 
   async function handleUpdateCategoryLabel(value: string, field: 'label_en' | 'label_ar', text: string) {
     const { error } = await supabase.from('categories').update({ [field]: text }).eq('value', value)
-    if (error) { toast.error(error.message || 'Save failed'); return }
+    if (error) { toast.error(error.message || t.adminSaveFailed); return }
     reloadCategories()
   }
 
@@ -174,10 +178,10 @@ export default function AdminSettings() {
       .from('products')
       .select('id', { count: 'exact', head: true })
       .eq('category', value)
-    if (count) { toast.error(`${count} product(s) still use this category`); return }
+    if (count) { toast.error(t.adminCategoryInUse(count)); return }
     const { error } = await supabase.from('categories').delete().eq('value', value)
-    if (error) { toast.error(error.message || 'Delete failed'); return }
-    toast.success('Category deleted')
+    if (error) { toast.error(error.message || t.adminDeleteFailed); return }
+    toast.success(t.adminCategoryDeleted)
     reloadCategories()
   }
 
@@ -203,19 +207,21 @@ export default function AdminSettings() {
   return (
     <div className="max-w-xl space-y-8">
       <UploadField
-        label="Logo"
+        label={t.adminLogo}
         currentUrl={settings?.logo_url || null}
         uploading={uploadingLogo}
         onChange={file => handleUpload('logo_url', file, setUploadingLogo)}
+        t={t}
       />
       <UploadField
-        label="Favicon"
+        label={t.adminFavicon}
         currentUrl={settings?.favicon_url || null}
         uploading={uploadingFavicon}
         onChange={file => handleUpload('favicon_url', file, setUploadingFavicon)}
+        t={t}
       />
       <div className="border border-border bg-card p-6">
-        <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-4">Display currency</span>
+        <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-4">{t.adminDisplayCurrency}</span>
         <select
           value={settings?.currency || 'EGP'}
           onChange={e => handleCurrencyChange(e.target.value)}
@@ -226,12 +232,12 @@ export default function AdminSettings() {
           ))}
         </select>
         <p className="text-[11px] text-muted-foreground mt-3">
-          Shown to shoppers only. Payment is always charged in EGP by Kashier.
+          {t.adminCurrencyNote}
         </p>
       </div>
 
       <div className="border border-border bg-card p-6 space-y-4">
-        <span className="block text-xs tracking-widest uppercase text-muted-foreground">Categories</span>
+        <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminCategories}</span>
         <div className="space-y-2">
           {categories.map((c, i) => (
             <div key={c.value} className="flex items-center gap-2">
@@ -241,7 +247,7 @@ export default function AdminSettings() {
                   onClick={() => handleMoveCategory(i, -1)}
                   disabled={i === 0}
                   className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-                  aria-label="Move up"
+                  aria-label={t.adminMoveUp}
                 >
                   <ArrowUp className="w-3 h-3" />
                 </button>
@@ -250,7 +256,7 @@ export default function AdminSettings() {
                   onClick={() => handleMoveCategory(i, 1)}
                   disabled={i === categories.length - 1}
                   className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-                  aria-label="Move down"
+                  aria-label={t.adminMoveDown}
                 >
                   <ArrowDown className="w-3 h-3" />
                 </button>
@@ -259,7 +265,7 @@ export default function AdminSettings() {
                 type="text"
                 defaultValue={c.label_en}
                 onBlur={e => e.target.value.trim() && e.target.value !== c.label_en && handleUpdateCategoryLabel(c.value, 'label_en', e.target.value.trim())}
-                placeholder="English name"
+                placeholder={t.adminEnglishName}
                 className="flex-1 min-w-0 bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none"
               />
               <input
@@ -274,7 +280,7 @@ export default function AdminSettings() {
                 type="button"
                 onClick={() => handleDeleteCategory(c.value)}
                 className="p-2 text-red-700 hover:bg-muted cursor-pointer flex-shrink-0"
-                aria-label="Delete category"
+                aria-label={t.adminDeleteCategory}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -286,7 +292,7 @@ export default function AdminSettings() {
             type="text"
             value={newLabelEn}
             onChange={e => setNewLabelEn(e.target.value)}
-            placeholder="English name"
+            placeholder={t.adminEnglishName}
             className="flex-1 min-w-0 bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none"
           />
           <input
@@ -302,7 +308,7 @@ export default function AdminSettings() {
             onClick={handleAddCategory}
             disabled={savingCategory}
             className="p-2 border border-border hover:bg-muted cursor-pointer disabled:opacity-50 flex-shrink-0"
-            aria-label="Add category"
+            aria-label={t.adminAddCategory}
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
@@ -310,9 +316,9 @@ export default function AdminSettings() {
       </div>
 
       <div className="border border-border bg-card p-6 space-y-4">
-        <span className="block text-xs tracking-widest uppercase text-muted-foreground">WhatsApp</span>
+        <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminWhatsapp}</span>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Phone number</label>
+          <label className="block text-xs text-muted-foreground mb-1">{t.adminPhoneNumber}</label>
           <input
             type="text"
             value={whatsapp.phone}
@@ -322,7 +328,7 @@ export default function AdminSettings() {
           />
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Message (English)</label>
+          <label className="block text-xs text-muted-foreground mb-1">{t.adminMessageEnglish}</label>
           <textarea
             value={whatsapp.message_en}
             onChange={e => setWhatsapp(prev => ({ ...prev, message_en: e.target.value }))}
@@ -331,7 +337,7 @@ export default function AdminSettings() {
           />
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Message (Arabic)</label>
+          <label className="block text-xs text-muted-foreground mb-1">{t.adminMessageArabic}</label>
           <textarea
             value={whatsapp.message_ar}
             onChange={e => setWhatsapp(prev => ({ ...prev, message_ar: e.target.value }))}
@@ -345,15 +351,15 @@ export default function AdminSettings() {
           disabled={savingWhatsapp}
           className="text-xs tracking-wider uppercase border border-foreground px-4 py-2 hover:bg-foreground hover:text-background transition-colors disabled:opacity-50 cursor-pointer"
         >
-          {savingWhatsapp ? 'Saving…' : 'Save'}
+          {savingWhatsapp ? t.adminSavingBtn : t.adminSaveBtn}
         </button>
       </div>
 
       <div className="border border-border bg-card p-6 space-y-4">
-        <span className="block text-xs tracking-widest uppercase text-muted-foreground">Contact & Social</span>
+        <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminContactSocial}</span>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Email</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t.fieldEmail}</label>
             <input
               type="email"
               value={contact.email}
@@ -362,7 +368,7 @@ export default function AdminSettings() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Phone</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t.fieldPhone}</label>
             <input
               type="text"
               value={contact.phone}
@@ -371,7 +377,7 @@ export default function AdminSettings() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Address (English)</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t.adminAddressEnglish}</label>
             <input
               type="text"
               value={contact.address_en}
@@ -380,7 +386,7 @@ export default function AdminSettings() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Address (Arabic)</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t.adminAddressArabic}</label>
             <input
               type="text"
               dir="rtl"
@@ -390,7 +396,7 @@ export default function AdminSettings() {
             />
           </div>
           <div className="col-span-2">
-            <label className="block text-xs text-muted-foreground mb-1">Map URL</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t.adminMapUrl}</label>
             <input
               type="text"
               value={contact.map_url}
@@ -399,7 +405,7 @@ export default function AdminSettings() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Instagram URL</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t.adminInstagramUrl}</label>
             <input
               type="text"
               value={contact.social_instagram}
@@ -408,7 +414,7 @@ export default function AdminSettings() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Facebook URL</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t.adminFacebookUrl}</label>
             <input
               type="text"
               value={contact.social_facebook}
@@ -417,7 +423,7 @@ export default function AdminSettings() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">TikTok URL</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t.adminTiktokUrl}</label>
             <input
               type="text"
               value={contact.social_tiktok}
@@ -426,7 +432,7 @@ export default function AdminSettings() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Twitter / X URL</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t.adminTwitterUrl}</label>
             <input
               type="text"
               value={contact.social_twitter}
@@ -440,7 +446,7 @@ export default function AdminSettings() {
           disabled={savingContact}
           className="text-xs tracking-wider uppercase border border-foreground px-4 py-2 hover:bg-foreground hover:text-background transition-colors disabled:opacity-50 cursor-pointer"
         >
-          {savingContact ? 'Saving…' : 'Save'}
+          {savingContact ? t.adminSavingBtn : t.adminSaveBtn}
         </button>
       </div>
     </div>
@@ -452,11 +458,13 @@ function UploadField({
   currentUrl,
   uploading,
   onChange,
+  t,
 }: {
   label: string
   currentUrl: string | null
   uploading: boolean
   onChange: (file: File | undefined) => void
+  t: Translations
 }) {
   return (
     <div className="border border-border bg-card p-6">
@@ -464,13 +472,13 @@ function UploadField({
       <div className="flex items-center gap-4">
         <div className="w-16 h-16 bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
           {currentUrl ? (
-            <img src={currentUrl} alt={`Current ${label}`} className="w-full h-full object-contain" />
+            <img src={currentUrl} alt={t.adminCurrentLabel(label)} className="w-full h-full object-contain" />
           ) : (
-            <span className="text-[10px] text-muted-foreground">None</span>
+            <span className="text-[10px] text-muted-foreground">{t.adminNone}</span>
           )}
         </div>
         <label className={`text-xs underline ${uploading ? 'opacity-50' : 'cursor-pointer'}`}>
-          {uploading ? 'Uploading…' : `Upload ${label}`}
+          {uploading ? t.adminUploading : t.adminUploadLabel(label)}
           <input
             type="file"
             accept="image/*"

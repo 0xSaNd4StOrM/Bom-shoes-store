@@ -7,10 +7,14 @@ import { useCurrency } from '@/contexts/CurrencyContext'
 import { ShoppingBag, User, Menu, X, LogOut, LayoutDashboard, Globe, ChevronDown, Search, Instagram, Facebook, Share2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase, ProductCatalogEntry } from '@/lib/supabase'
+import { toast } from 'sonner'
 import Logo from './Logo'
 import WhatsAppButton from './WhatsAppButton'
 
-type NewsletterContent = { title_en: string; title_ar: string; subtitle_en: string; subtitle_ar: string }
+type NewsletterContent = { title_en: string; title_ar: string; subtitle_en: string; subtitle_ar: string; enabled?: boolean }
+type AnnouncementContent = { enabled?: boolean; lines?: { en: string; ar: string }[] }
+type FooterLink = { label_en: string; label_ar: string; url: string }
+type FooterLinksContent = { items?: FooterLink[] }
 type ContactContent = {
   email: string | null
   phone: string | null
@@ -54,6 +58,10 @@ export default function Layout() {
   const [history, setHistory] = useState<string[]>(() => loadSearchHistory())
   const [newsletterContent, setNewsletterContent] = useState<NewsletterContent | null>(null)
   const [contactContent, setContactContent] = useState<ContactContent | null>(null)
+  const [announcement, setAnnouncement] = useState<AnnouncementContent | null>(null)
+  const [footerLinks, setFooterLinks] = useState<FooterLinksContent | null>(null)
+  const [subscribeEmail, setSubscribeEmail] = useState('')
+  const [subscribing, setSubscribing] = useState(false)
   const navigate = useNavigate()
   const langRef = useRef<HTMLDivElement>(null)
   const userRef = useRef<HTMLDivElement>(null)
@@ -92,23 +100,55 @@ export default function Layout() {
     return () => window.removeEventListener('keydown', onKey)
   }, [searchOpen])
 
-  // Footer newsletter heading/subtitle + contact/social info -- both admin-
-  // editable via site_content, fetched once in a single round trip.
+  // Footer newsletter heading/subtitle, contact/social info, announcement
+  // ticker lines, and footer "Craft" links -- all admin-editable via
+  // site_content, fetched once in a single round trip.
   useEffect(() => {
     supabase
       .from('site_content')
       .select('key, value')
-      .in('key', ['newsletter', 'contact'])
+      .in('key', ['newsletter', 'contact', 'announcement', 'footer_links'])
       .then(
         ({ data }) => {
           for (const row of data || []) {
             if (row.key === 'newsletter') setNewsletterContent(row.value as NewsletterContent)
             if (row.key === 'contact') setContactContent(row.value as ContactContent)
+            if (row.key === 'announcement') setAnnouncement(row.value as AnnouncementContent)
+            if (row.key === 'footer_links') setFooterLinks(row.value as FooterLinksContent)
           }
         },
-        () => { /* keep footer fallbacks */ }
+        () => { /* keep footer/ticker fallbacks */ }
       )
   }, [])
+
+  async function handleNewsletterSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const email = subscribeEmail.trim()
+    if (!email || subscribing) return
+    setSubscribing(true)
+    supabase
+      .from('newsletter_subscribers')
+      .insert({ email })
+      .then(
+        ({ error }) => {
+          setSubscribing(false)
+          if (error) {
+            if (error.code === '23505') {
+              toast.error(t.homeNewsletterAlready)
+            } else {
+              toast.error(t.homeNewsletterError)
+            }
+            return
+          }
+          toast.success(t.homeNewsletterToast)
+          setSubscribeEmail('')
+        },
+        () => {
+          setSubscribing(false)
+          toast.error(t.homeNewsletterError)
+        }
+      )
+  }
 
   // Move focus into the panel on open, and back to the toggle button on
   // close -- however it closes (Escape, click-outside, the X, or committing
@@ -189,23 +229,30 @@ export default function Layout() {
     navigate('/')
   }
 
+  // Admin-managed ticker lines when configured; falls back to the hardcoded
+  // marqueeLine1..6 translations if the row is missing, the fetch failed, or
+  // no lines were ever added.
+  const announcementEnabled = announcement?.enabled !== false
+  const marqueeLines = announcement?.lines?.length
+    ? announcement.lines.map(l => (lang === 'ar' ? l.ar : l.en))
+    : [t.marqueeLine1, t.marqueeLine2, t.marqueeLine3, t.marqueeLine4, t.marqueeLine5, t.marqueeLine6]
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Announcement bar */}
+      {announcementEnabled && (
       <div className="bg-foreground text-background text-[11px] tracking-[0.25em] uppercase py-2.5 px-4 text-center font-light overflow-hidden">
         <div className="marquee-track gap-12">
           {[0, 1].map((dup) => (
             <div key={dup} className="flex gap-12 px-6 shrink-0">
-              <span>★ {t.marqueeLine1}</span>
-              <span>★ {t.marqueeLine2}</span>
-              <span>★ {t.marqueeLine3}</span>
-              <span>★ {t.marqueeLine4}</span>
-              <span>★ {t.marqueeLine5}</span>
-              <span>★ {t.marqueeLine6}</span>
+              {marqueeLines.map((line, i) => (
+                <span key={i}>★ {line}</span>
+              ))}
             </div>
           ))}
         </div>
       </div>
+      )}
 
       {/* Header */}
       <header
@@ -550,12 +597,17 @@ export default function Layout() {
             <div className="md:col-span-2">
               <h4 className="text-[11px] tracking-[0.25em] uppercase font-medium mb-6 text-background/90">{t.footerAtelier}</h4>
               <ul className="space-y-3 text-sm font-light text-background/70">
-                <li><a href="#" className="hover:text-background transition-colors">{t.footerOurStory}</a></li>
-                <li><a href="#" className="hover:text-background transition-colors">{t.footerCraftsmanship}</a></li>
-                <li><a href="#" className="hover:text-background transition-colors">{t.footerCare}</a></li>
+                {footerLinks?.items?.map((link, i) => (
+                  <li key={i}>
+                    <a href={link.url} className="hover:text-background transition-colors">
+                      {(lang === 'ar' ? link.label_ar : link.label_en) || link.url}
+                    </a>
+                  </li>
+                ))}
               </ul>
               <FooterContact contact={contactContent} lang={lang} label={t.footerContact} />
             </div>
+            {newsletterContent?.enabled !== false && (
             <div className="md:col-span-3">
               <h4 className="text-[11px] tracking-[0.25em] uppercase font-medium mb-6 text-background/90">
                 {(lang === 'ar' ? newsletterContent?.title_ar : newsletterContent?.title_en) || t.homeNewsletterTitle}
@@ -563,18 +615,26 @@ export default function Layout() {
               <p className="text-sm font-light text-background/70 mb-4 leading-relaxed">
                 {(lang === 'ar' ? newsletterContent?.subtitle_ar : newsletterContent?.subtitle_en) || t.homeNewsletterDesc}
               </p>
-              <div className="flex gap-2">
+              <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
                 <input
                   type="email"
+                  required
+                  value={subscribeEmail}
+                  onChange={(e) => setSubscribeEmail(e.target.value)}
                   placeholder={t.homeNewsletterPlaceholder}
                   dir={lang === 'ar' ? 'rtl' : 'ltr'}
                   className="flex-1 bg-transparent border-b border-background/30 focus:border-background outline-none py-2 text-sm placeholder:text-background/40 text-background"
                 />
-                <button className="text-sm tracking-wider border-b border-background pb-1 hover:opacity-70 transition-opacity cursor-pointer">
+                <button
+                  type="submit"
+                  disabled={subscribing}
+                  className="text-sm tracking-wider border-b border-background pb-1 hover:opacity-70 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   {t.homeNewsletterCta}
                 </button>
-              </div>
+              </form>
             </div>
+            )}
           </div>
           <div className="mt-16 pt-8 border-t border-background/10 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs text-background/50 font-light">

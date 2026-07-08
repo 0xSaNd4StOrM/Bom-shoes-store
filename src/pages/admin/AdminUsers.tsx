@@ -6,6 +6,10 @@ import { Loader2, ChevronDown, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 const ROLE_VALUES = ['customer', 'admin']
+const ROLE_LABEL_MAP: Record<string, 'adminRoleCustomer' | 'adminRoleAdmin'> = {
+  customer: 'adminRoleCustomer',
+  admin: 'adminRoleAdmin',
+}
 
 export default function AdminUsers() {
   const [profiles, setProfiles] = useState<Profile[]>([])
@@ -37,7 +41,7 @@ export default function AdminUsers() {
   async function updateRole(p: Profile, newRole: string) {
     const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', p.id)
     if (error) { toast.error(error.message); return }
-    toast.success('Role updated')
+    toast.success(t.adminRoleUpdated)
     load()
   }
 
@@ -68,10 +72,10 @@ export default function AdminUsers() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs tracking-widest uppercase text-muted-foreground">
                 <tr>
-                  <th className="text-start px-4 py-3">Email</th>
-                  <th className="text-start px-4 py-3">Full Name</th>
+                  <th className="text-start px-4 py-3">{t.fieldEmail}</th>
+                  <th className="text-start px-4 py-3">{t.fieldFullName}</th>
                   <th className="text-start px-4 py-3">{t.adminDate}</th>
-                  <th className="text-start px-4 py-3">Role</th>
+                  <th className="text-start px-4 py-3">{t.adminRole}</th>
                 </tr>
               </thead>
               <tbody>
@@ -80,7 +84,7 @@ export default function AdminUsers() {
                   return (
                     <tr key={p.id} className="border-t border-border hover:bg-muted/20">
                       <td className="px-4 py-3">
-                        {p.email || t.dash}{isSelf && <span className="text-xs text-muted-foreground"> (you)</span>}
+                        {p.email || t.dash}{isSelf && <span className="text-xs text-muted-foreground">{t.adminYouSuffix}</span>}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{p.full_name || t.dash}</td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
@@ -95,18 +99,18 @@ export default function AdminUsers() {
                               // ponytail: block self-demotion by disabling the control outright
                               // rather than a confirm() dialog -- nothing to misclick through,
                               // and it can't leave the app with zero admins by accident.
-                              title={isSelf ? "You can't change your own role here" : undefined}
+                              title={isSelf ? t.adminCantChangeOwnRole : undefined}
                               onChange={e => updateRole(p, e.target.value)}
                               className="appearance-none bg-transparent border border-border px-2.5 py-1 pe-7 text-xs cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {ROLE_VALUES.map(r => (
-                                <option key={r} value={r}>{r}</option>
+                                <option key={r} value={r}>{t[ROLE_LABEL_MAP[r]]}</option>
                               ))}
                             </select>
                             <ChevronDown className="w-3 h-3 absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                           </div>
                         ) : (
-                          <span className="text-xs">{p.role}</span>
+                          <span className="text-xs">{t[ROLE_LABEL_MAP[p.role]] || p.role}</span>
                         )}
                       </td>
                     </tr>

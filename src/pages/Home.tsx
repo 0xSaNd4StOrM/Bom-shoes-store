@@ -257,6 +257,14 @@ export default function Home() {
   const dropC = content.limited_drop
   const trustC = content.trust_badges
   const atelierC = content.atelier
+  // Explicit false hides a section; absent/undefined defaults to shown.
+  const heroEnabled = heroC?.enabled !== false
+  const showcaseEnabled = content.showcase?.enabled !== false
+  const curatedEnabled = curatedC?.enabled !== false
+  const dropEnabled = dropC?.enabled !== false
+  const trustEnabled = trustC?.enabled !== false
+  const atelierEnabled = atelierC?.enabled !== false
+  const categoriesStripEnabled = content.categories_strip?.enabled !== false
   const trustItems = trustC?.items?.length ? trustC.items : [
     { icon: 'Truck', title_en: t.homeTrust1Title, title_ar: t.homeTrust1Title, desc_en: t.homeTrust1Desc, desc_ar: t.homeTrust1Desc },
     { icon: 'ShieldCheck', title_en: t.homeTrust2Title, title_ar: t.homeTrust2Title, desc_en: t.homeTrust2Desc, desc_ar: t.homeTrust2Desc },
@@ -267,7 +275,7 @@ export default function Home() {
   return (
     <div className="bg-cream">
       {/* ===== HERO ===== */}
-      {banners.length > 0 ? (
+      {heroEnabled && (banners.length > 0 ? (
         <HeroBanners banners={banners} />
       ) : (
       <section className="relative min-h-[95vh] flex items-center overflow-hidden bg-cream">
@@ -364,9 +372,10 @@ export default function Home() {
           </div>
         </div>
       </section>
-      )}
+      ))}
 
       {/* ===== CATEGORIES STRIP (replaces the reference's brand-logo strip) ===== */}
+      {categoriesStripEnabled && (
       <section className="py-8 px-6 lg:px-10 border-y border-border/60 bg-cream">
         <div className="max-w-[1400px] mx-auto flex flex-wrap items-center gap-3">
           <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground me-2">
@@ -394,11 +403,13 @@ export default function Home() {
           </Link>
         </div>
       </section>
+      )}
 
       {/* ===== 3D SCROLL SHOE SHOWCASE -- untouched, signature feature ===== */}
-      <ShoeShowcase3D />
+      {showcaseEnabled && <ShoeShowcase3D />}
 
       {/* ===== CURATED FOR YOU ===== */}
+      {curatedEnabled && (
       <section className="px-6 lg:px-10 py-24 md:py-32 bg-cream">
         <div className="max-w-[1400px] mx-auto">
           <SectionHeading
@@ -432,8 +443,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ===== LIMITED DROP ===== */}
+      {dropEnabled && (
       <section className="relative bg-[#0A0907] text-background overflow-hidden">
         <div className="max-w-[1400px] mx-auto grid lg:grid-cols-2">
           <div className="relative aspect-[4/5] lg:aspect-auto lg:min-h-[640px] reveal" ref={addRevealRef}>
@@ -476,8 +489,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ===== TRUST BADGES ===== */}
+      {trustEnabled && (
       <section className="px-6 lg:px-10 py-20 bg-cream">
         <div className="max-w-[1400px] mx-auto">
           <p className="text-center text-[11px] tracking-[0.3em] uppercase text-gold-on-light mb-12 reveal" ref={addRevealRef}>
@@ -497,9 +512,11 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ===== ATELIER EDITORIAL (kept -- distinct brand story, not covered
           by any of the new sections above) ===== */}
+      {atelierEnabled && (
       <section className="py-24 md:py-32 px-6 lg:px-10 bg-foreground text-background overflow-hidden">
         <div className="max-w-[1400px] mx-auto grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <div className="relative aspect-[4/5] overflow-hidden reveal" ref={addRevealRef}>
@@ -523,7 +540,7 @@ export default function Home() {
             <p className="text-background/70 font-light leading-relaxed max-w-lg mb-10 text-lg">
               {(lang === 'ar' ? atelierC?.subtitle_ar : atelierC?.subtitle_en) ?? t.homeAtelierSubtitle}
             </p>
-            <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-10">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6 mb-10">
               {(atelierC?.stats?.length ? atelierC.stats : [
                 { value: 40, label_en: 'years of craft', label_ar: 'years of craft' },
                 { value: 16, label_en: 'pairs of hands', label_ar: 'pairs of hands' },
@@ -545,6 +562,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ===== TESTIMONIALS (kept -- social proof, restyled to cream) ===== */}
       {testimonials === null && (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, Order, ProductCatalogEntry } from '@/lib/supabase'
-import { useT, useLanguage } from '@/contexts/LanguageContext'
+import { useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { Package, ShoppingBag, TrendingUp, ListOrdered, Loader2 } from 'lucide-react'
 import {
@@ -73,7 +73,6 @@ export default function AdminDashboard() {
   const [sellersChart, setSellersChart] = useState<{ name: string; units: number }[]>([])
   const [loading, setLoading] = useState(true)
   const t = useT()
-  const { lang } = useLanguage()
   const { formatPrice } = useCurrency()
 
   useEffect(() => {
@@ -241,7 +240,7 @@ export default function AdminDashboard() {
                     <p className="font-mono text-xs text-muted-foreground truncate">
                       {o.kashier_order_id || o.id.slice(0, 8)}
                     </p>
-                    <p className="truncate">{o.customer_name || (lang === 'ar' ? 'زائر' : 'Guest')}</p>
+                    <p className="truncate">{o.customer_name || t.adminGuest}</p>
                   </div>
                   <div className="text-end flex-shrink-0 ms-4">
                     <p className="font-medium">{formatPrice(Number(o.total_amount))}</p>

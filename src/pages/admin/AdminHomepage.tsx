@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { supabase, Testimonial } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useT } from '@/contexts/LanguageContext'
 import { Loader2, Plus, X, Edit2, Trash2, ArrowUp, ArrowDown, Star } from 'lucide-react'
 import { toast } from 'sonner'
 
 // Every one of these keys is pre-seeded by migration (see task context) --
 // plain UPDATE is always correct here, there's no insert-then-conflict case.
-const SITE_CONTENT_KEYS = ['hero', 'showcase', 'curated', 'limited_drop', 'trust_badges', 'atelier'] as const
+const SITE_CONTENT_KEYS = [
+  'hero', 'showcase', 'curated', 'limited_drop', 'trust_badges', 'atelier',
+  'newsletter', 'categories_strip', 'announcement', 'footer_links',
+] as const
 type SiteContentKey = typeof SITE_CONTENT_KEYS[number]
 
 const TRUST_ICONS = ['Truck', 'ShieldCheck', 'RotateCcw', 'Lock', 'Package', 'Award', 'Heart', 'Star', 'CreditCard', 'Clock', 'Gift', 'Sparkles']
@@ -20,6 +24,10 @@ const TABS = [
   { key: 'limited_drop', label: 'Limited Drop' },
   { key: 'trust_badges', label: 'Trust Badges' },
   { key: 'atelier', label: 'Atelier' },
+  { key: 'newsletter', label: 'Newsletter' },
+  { key: 'categories_strip', label: 'Categories Strip' },
+  { key: 'announcement', label: 'Announcement Bar' },
+  { key: 'footer_links', label: 'Footer Links' },
   { key: 'testimonials', label: 'Testimonials' },
 ] as const
 type TabKey = typeof TABS[number]['key']
@@ -104,6 +112,10 @@ export default function AdminHomepage() {
         />
       )}
       {tab === 'atelier' && <AtelierTab value={drafts.atelier || {}} setField={(f, v) => setField('atelier', f, v)} onSave={() => saveKey('atelier')} readOnly={!isAdmin} />}
+      {tab === 'newsletter' && <NewsletterTab value={drafts.newsletter || {}} setField={(f, v) => setField('newsletter', f, v)} onSave={() => saveKey('newsletter')} readOnly={!isAdmin} />}
+      {tab === 'categories_strip' && <CategoriesStripTab value={drafts.categories_strip || {}} setField={(f, v) => setField('categories_strip', f, v)} onSave={() => saveKey('categories_strip')} readOnly={!isAdmin} />}
+      {tab === 'announcement' && <AnnouncementTab value={drafts.announcement || { lines: [] }} setField={(f, v) => setField('announcement', f, v)} onSave={() => saveKey('announcement')} readOnly={!isAdmin} />}
+      {tab === 'footer_links' && <FooterLinksTab value={drafts.footer_links || { items: [] }} setField={(f, v) => setField('footer_links', f, v)} onSave={() => saveKey('footer_links')} readOnly={!isAdmin} />}
       {tab === 'testimonials' && <TestimonialsTab />}
     </div>
   )
@@ -155,6 +167,21 @@ function BilingualField({
   )
 }
 
+function EnabledCheckbox({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled: boolean }) {
+  return (
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={e => onChange(e.target.checked)}
+        className="w-4 h-4 cursor-pointer disabled:opacity-40"
+      />
+      <span className="text-sm">Show this section on the homepage</span>
+    </label>
+  )
+}
+
 function SaveBar({ onSave, readOnly }: { onSave: () => void; readOnly: boolean }) {
   const [saving, setSaving] = useState(false)
   return (
@@ -189,6 +216,7 @@ function HeroTab({ value, setField, onSave, readOnly }: { value: any; setField: 
       <BilingualField label="Secondary CTA text" valueEn={value.cta2_text_en || ''} valueAr={value.cta2_text_ar || ''} onEnChange={v => setField('cta2_text_en', v)} onArChange={v => setField('cta2_text_ar', v)} disabled={readOnly} />
       <Field label="Secondary CTA link" value={value.cta2_link || ''} onChange={v => setField('cta2_link', v)} placeholder="/shop" disabled={readOnly} />
       <BilingualField label="Scroll hint text" valueEn={value.scroll_text_en || ''} valueAr={value.scroll_text_ar || ''} onEnChange={v => setField('scroll_text_en', v)} onArChange={v => setField('scroll_text_ar', v)} disabled={readOnly} />
+      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>
   )
@@ -203,6 +231,7 @@ function CuratedTab({ value, setField, onSave, readOnly }: { value: any; setFiel
       <BilingualField label="Heading" valueEn={value.heading_en || ''} valueAr={value.heading_ar || ''} onEnChange={v => setField('heading_en', v)} onArChange={v => setField('heading_ar', v)} disabled={readOnly} />
       <BilingualField label={'"View all" link text'} valueEn={value.view_all_en || ''} valueAr={value.view_all_ar || ''} onEnChange={v => setField('view_all_en', v)} onArChange={v => setField('view_all_ar', v)} disabled={readOnly} />
       <Field label="Product limit" type="number" value={String(value.limit ?? 5)} onChange={v => setField('limit', Number(v) || 0)} disabled={readOnly} />
+      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>
   )
@@ -242,6 +271,7 @@ function LimitedDropTab({ value, setField, onSave, readOnly }: { value: any; set
           disabled={readOnly}
         />
       )}
+      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>
   )
@@ -315,6 +345,7 @@ function ShowcaseTab({
         )}
       </div>
 
+      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>
   )
@@ -370,6 +401,7 @@ function TrustBadgesTab({ value, setField, onSave, readOnly }: { value: any; set
         </div>
       </div>
 
+      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>
   )
@@ -377,17 +409,17 @@ function TrustBadgesTab({ value, setField, onSave, readOnly }: { value: any; set
 
 // ---------- Atelier ----------
 
-// Stats is a fixed 3-item array in Home.tsx's atelier section design -- no
-// add/remove needed, just three rows.
 function AtelierTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
-  const stats: any[] = value.stats && value.stats.length === 3 ? value.stats : [
-    { value: '', label_en: '', label_ar: '' },
-    { value: '', label_en: '', label_ar: '' },
-    { value: '', label_en: '', label_ar: '' },
-  ]
+  const stats: any[] = value.stats || []
 
   function updateStat(idx: number, field: string, v: any) {
     setField('stats', stats.map((s, i) => (i === idx ? { ...s, [field]: v } : s)))
+  }
+  function addStat() {
+    setField('stats', [...stats, { value: '', label_en: '', label_ar: '' }])
+  }
+  function removeStat(idx: number) {
+    setField('stats', stats.filter((_, i) => i !== idx))
   }
 
   return (
@@ -398,21 +430,179 @@ function AtelierTab({ value, setField, onSave, readOnly }: { value: any; setFiel
       <BilingualField label="Tag" valueEn={value.tag_en || ''} valueAr={value.tag_ar || ''} onEnChange={v => setField('tag_en', v)} onArChange={v => setField('tag_ar', v)} disabled={readOnly} />
 
       <div>
-        <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Stats</span>
+        <div className="flex items-center justify-between mb-3">
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">Stats</span>
+          {!readOnly && (
+            <button type="button" onClick={addStat} className="text-xs underline cursor-pointer">+ Add stat</button>
+          )}
+        </div>
         <div className="space-y-3">
           {stats.map((s, idx) => (
-            <div key={idx} className="border border-border p-3 grid grid-cols-3 gap-3">
-              <Field label="Value" value={s.value || ''} onChange={v => updateStat(idx, 'value', v)} disabled={readOnly} />
-              <Field label="Label (EN)" value={s.label_en || ''} onChange={v => updateStat(idx, 'label_en', v)} disabled={readOnly} />
-              <Field label="Label (AR)" value={s.label_ar || ''} onChange={v => updateStat(idx, 'label_ar', v)} disabled={readOnly} />
+            <div key={idx} className="border border-border p-3 space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <Field label="Value" value={s.value || ''} onChange={v => updateStat(idx, 'value', v)} disabled={readOnly} />
+                <Field label="Label (EN)" value={s.label_en || ''} onChange={v => updateStat(idx, 'label_en', v)} disabled={readOnly} />
+                <Field label="Label (AR)" value={s.label_ar || ''} onChange={v => updateStat(idx, 'label_ar', v)} disabled={readOnly} />
+              </div>
+              <div className="flex justify-end">
+                <button type="button" onClick={() => removeStat(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Remove stat">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           ))}
+          {stats.length === 0 && <p className="text-sm text-muted-foreground">No stats yet</p>}
         </div>
       </div>
 
       <BilingualField label="CTA text" valueEn={value.cta_text_en || ''} valueAr={value.cta_text_ar || ''} onEnChange={v => setField('cta_text_en', v)} onArChange={v => setField('cta_text_ar', v)} disabled={readOnly} />
       <Field label="CTA link" value={value.cta_link || ''} onChange={v => setField('cta_link', v)} placeholder="/shop" disabled={readOnly} />
       <Field label="Image URL" value={value.image_url || ''} onChange={v => setField('image_url', v)} placeholder="https://… (blank for automatic fallback)" disabled={readOnly} />
+      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
+      <SaveBar onSave={onSave} readOnly={readOnly} />
+    </Card>
+  )
+}
+
+// ---------- Newsletter ----------
+
+function NewsletterTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const [count, setCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    supabase.from('newsletter_subscribers').select('*', { count: 'exact', head: true }).then(
+      ({ count }) => setCount(count ?? 0),
+      () => setCount(null),
+    )
+  }, [])
+
+  return (
+    <Card>
+      <BilingualField label="Title" valueEn={value.title_en || ''} valueAr={value.title_ar || ''} onEnChange={v => setField('title_en', v)} onArChange={v => setField('title_ar', v)} disabled={readOnly} />
+      <BilingualField label="Subtitle" valueEn={value.subtitle_en || ''} valueAr={value.subtitle_ar || ''} onEnChange={v => setField('subtitle_en', v)} onArChange={v => setField('subtitle_ar', v)} textarea disabled={readOnly} />
+      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
+      <p className="text-sm text-muted-foreground">
+        {count === null ? 'Loading subscriber count…' : `${count} ${count === 1 ? 'person has' : 'people have'} subscribed`}
+      </p>
+      <SaveBar onSave={onSave} readOnly={readOnly} />
+    </Card>
+  )
+}
+
+// ---------- Categories Strip ----------
+
+function CategoriesStripTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  return (
+    <Card>
+      <p className="text-sm text-muted-foreground">
+        The category tiles strip is generated automatically from your product categories -- there's nothing else to edit here.
+      </p>
+      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
+      <SaveBar onSave={onSave} readOnly={readOnly} />
+    </Card>
+  )
+}
+
+// ---------- Announcement Bar ----------
+
+function AnnouncementTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const lines: any[] = value.lines || []
+
+  function updateLine(idx: number, field: string, v: any) {
+    setField('lines', lines.map((l, i) => (i === idx ? { ...l, [field]: v } : l)))
+  }
+  function addLine() {
+    setField('lines', [...lines, { en: '', ar: '' }])
+  }
+  function removeLine(idx: number) {
+    setField('lines', lines.filter((_, i) => i !== idx))
+  }
+  function move(idx: number, dir: -1 | 1) {
+    const swap = idx + dir
+    if (swap < 0 || swap >= lines.length) return
+    const next = [...lines]
+    ;[next[idx], next[swap]] = [next[swap], next[idx]]
+    setField('lines', next)
+  }
+
+  return (
+    <Card>
+      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
+
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">Lines</span>
+          {!readOnly && (
+            <button type="button" onClick={addLine} className="text-xs underline cursor-pointer">+ Add line</button>
+          )}
+        </div>
+        <div className="space-y-3">
+          {lines.map((l, idx) => (
+            <div key={idx} className="border border-border p-4 space-y-3">
+              <BilingualField label={`Line ${idx + 1}`} valueEn={l.en || ''} valueAr={l.ar || ''} onEnChange={v => updateLine(idx, 'en', v)} onArChange={v => updateLine(idx, 'ar', v)} disabled={readOnly} />
+              <div className="flex items-center justify-end gap-1">
+                <button type="button" onClick={() => move(idx, -1)} disabled={readOnly || idx === 0} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Move up">
+                  <ArrowUp className="w-3.5 h-3.5" />
+                </button>
+                <button type="button" onClick={() => move(idx, 1)} disabled={readOnly || idx === lines.length - 1} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Move down">
+                  <ArrowDown className="w-3.5 h-3.5" />
+                </button>
+                <button type="button" onClick={() => removeLine(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Remove line">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+          {lines.length === 0 && <p className="text-sm text-muted-foreground">No lines yet</p>}
+        </div>
+      </div>
+
+      <SaveBar onSave={onSave} readOnly={readOnly} />
+    </Card>
+  )
+}
+
+// ---------- Footer Links ----------
+
+function FooterLinksTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const items: any[] = value.items || []
+
+  function updateItem(idx: number, field: string, v: any) {
+    setField('items', items.map((it, i) => (i === idx ? { ...it, [field]: v } : it)))
+  }
+  function addItem() {
+    setField('items', [...items, { label_en: '', label_ar: '', url: '' }])
+  }
+  function removeItem(idx: number) {
+    setField('items', items.filter((_, i) => i !== idx))
+  }
+
+  return (
+    <Card>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">Links</span>
+          {!readOnly && (
+            <button type="button" onClick={addItem} className="text-xs underline cursor-pointer">+ Add link</button>
+          )}
+        </div>
+        <div className="space-y-4">
+          {items.map((it, idx) => (
+            <div key={idx} className="border border-border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Link {idx + 1}</span>
+                <button type="button" onClick={() => removeItem(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Remove link">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <BilingualField label="Label" valueEn={it.label_en || ''} valueAr={it.label_ar || ''} onEnChange={v => updateItem(idx, 'label_en', v)} onArChange={v => updateItem(idx, 'label_ar', v)} disabled={readOnly} />
+              <Field label="URL" value={it.url || ''} onChange={v => updateItem(idx, 'url', v)} placeholder="/pages/about" disabled={readOnly} />
+            </div>
+          ))}
+          {items.length === 0 && <p className="text-sm text-muted-foreground">No links yet</p>}
+        </div>
+      </div>
+
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>
   )
@@ -430,6 +620,7 @@ function TestimonialsTab() {
   const [editing, setEditing] = useState<Partial<Testimonial> | null>(null)
   const [saving, setSaving] = useState(false)
   const { isAdmin } = useAuth()
+  const t = useT()
 
   async function load() {
     setLoading(true)
@@ -568,7 +759,7 @@ function TestimonialsTab() {
                     <td className="px-4 py-3 text-muted-foreground">
                       {r.rating ? (
                         <span className="inline-flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-current" />{r.rating}</span>
-                      ) : '—'}
+                      ) : t.dash}
                     </td>
                     <td className="px-4 py-3">
                       <input type="checkbox" checked={r.active} onChange={() => toggleActive(r)} className="w-4 h-4 cursor-pointer" aria-label="Active" />

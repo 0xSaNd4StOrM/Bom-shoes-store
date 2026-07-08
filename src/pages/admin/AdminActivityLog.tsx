@@ -1,18 +1,9 @@
 import { useEffect, useState, Fragment } from 'react'
 import { supabase, ActivityLog } from '@/lib/supabase'
+import { useT } from '@/contexts/LanguageContext'
 import { Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 
 const PAGE_SIZE = 50
-
-// Labels are singular for readability; the filter value itself is the real
-// entity_type stored on the row, which is the trigger's tg_table_name (i.e.
-// the plural table name -- 'products'/'orders'/'coupons').
-const FILTER_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'products', label: 'Product' },
-  { value: 'orders', label: 'Order' },
-  { value: 'coupons', label: 'Coupon' },
-]
 
 function actionClass(action: string): string {
   if (action === 'INSERT') return 'border-emerald-700/50 text-emerald-700'
@@ -33,6 +24,17 @@ export default function AdminActivityLog() {
   // joined client-side -- same pattern AdminCoupons.tsx uses for redemption
   // counts/product names.
   const [actorNames, setActorNames] = useState<Record<string, string>>({})
+  const t = useT()
+
+  // Labels are singular for readability; the filter value itself is the real
+  // entity_type stored on the row, which is the trigger's tg_table_name (i.e.
+  // the plural table name -- 'products'/'orders'/'coupons').
+  const FILTER_OPTIONS = [
+    { value: 'all', label: t.shopAll },
+    { value: 'products', label: t.adminProduct },
+    { value: 'orders', label: t.adminOrder },
+    { value: 'coupons', label: t.adminCoupon },
+  ]
 
   function buildQuery(activeFilter: string) {
     let query = supabase.from('activity_logs').select('*').order('created_at', { ascending: false })
@@ -84,7 +86,7 @@ export default function AdminActivityLog() {
   }
 
   function actorLabel(l: ActivityLog): string {
-    if (!l.actor_id) return 'System'
+    if (!l.actor_id) return t.adminSystem
     return actorNames[l.actor_id] || l.actor_id.slice(0, 8)
   }
 
@@ -114,7 +116,7 @@ export default function AdminActivityLog() {
         </div>
       ) : logs.length === 0 ? (
         <div className="border border-border bg-card p-12 text-center">
-          <p className="text-muted-foreground">No activity yet.</p>
+          <p className="text-muted-foreground">{t.adminNoActivity}</p>
         </div>
       ) : (
         <div className="border border-border bg-card overflow-hidden">
@@ -122,11 +124,11 @@ export default function AdminActivityLog() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs tracking-widest uppercase text-muted-foreground">
                 <tr>
-                  <th className="text-start px-4 py-3">Time</th>
-                  <th className="text-start px-4 py-3">Actor</th>
-                  <th className="text-start px-4 py-3">Action</th>
-                  <th className="text-start px-4 py-3">Entity</th>
-                  <th className="text-end px-4 py-3">Details</th>
+                  <th className="text-start px-4 py-3">{t.adminTime}</th>
+                  <th className="text-start px-4 py-3">{t.adminActor}</th>
+                  <th className="text-start px-4 py-3">{t.adminAction}</th>
+                  <th className="text-start px-4 py-3">{t.adminEntity}</th>
+                  <th className="text-end px-4 py-3">{t.adminDetailsCol}</th>
                 </tr>
               </thead>
               <tbody>
@@ -155,7 +157,7 @@ export default function AdminActivityLog() {
                           type="button"
                           onClick={e => { e.stopPropagation(); toggle(l.id) }}
                           aria-expanded={expanded.has(l.id)}
-                          aria-label={expanded.has(l.id) ? 'Collapse details' : 'Expand details'}
+                          aria-label={expanded.has(l.id) ? t.adminCollapseDetails : t.adminExpandDetails}
                           className="cursor-pointer p-1 -m-1"
                         >
                           {expanded.has(l.id)
@@ -186,7 +188,7 @@ export default function AdminActivityLog() {
                 className="text-xs underline cursor-pointer disabled:opacity-50 flex items-center gap-2"
               >
                 {loadingMore && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Load more
+                {t.adminLoadMore}
               </button>
             </div>
           )}

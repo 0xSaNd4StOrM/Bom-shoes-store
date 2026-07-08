@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import { supabase, Coupon } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { useT } from '@/contexts/LanguageContext'
 import { Loader2, Plus, X, Edit2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCategories } from '@/contexts/CategoriesContext'
+
+type Translations = ReturnType<typeof useT>
 
 const EMPTY: Partial<Coupon> = {
   code: '',
@@ -43,21 +46,21 @@ function fromLocalInput(v: string): string | null {
   return v ? new Date(v).toISOString() : null
 }
 
-function discountLabel(c: Coupon, formatPrice: (n: number) => string): string {
-  if (c.discount_type === 'percentage') return `${c.discount_value}% off`
-  if (c.discount_type === 'fixed') return `${formatPrice(c.discount_value)} off`
+function discountLabel(c: Coupon, formatPrice: (n: number) => string, t: Translations): string {
+  if (c.discount_type === 'percentage') return t.adminDiscountPercentOff(c.discount_value)
+  if (c.discount_type === 'fixed') return t.adminDiscountFixedOff(formatPrice(c.discount_value))
   if (c.discount_type === 'buy_x_get_y') {
-    return `Buy ${c.buy_quantity ?? '?'} Get ${c.get_quantity ?? '?'} ${c.get_discount_percent ?? '?'}% off`
+    return t.adminDiscountBxgyOff(c.buy_quantity ?? 0, c.get_quantity ?? 0, c.get_discount_percent ?? 0)
   }
-  return 'Free shipping'
+  return t.adminFreeShipping
 }
 
-function dateRangeLabel(c: Coupon): string {
+function dateRangeLabel(c: Coupon, t: Translations): string {
   const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null)
   const start = fmt(c.starts_at)
   const end = fmt(c.ends_at)
-  if (!start && !end) return 'No date limit'
-  return `${start || 'Any'} → ${end || 'Any'}`
+  if (!start && !end) return t.adminNoDateLimit
+  return `${start || t.adminAny} → ${end || t.adminAny}`
 }
 
 export default function AdminCoupons() {
@@ -70,6 +73,7 @@ export default function AdminCoupons() {
   const { isAdmin } = useAuth()
   const { formatPrice, currency } = useCurrency()
   const { categories } = useCategories()
+  const t = useT()
   const CATEGORY_VALUES = categories.map(c => c.value)
 
   async function load() {
@@ -104,7 +108,7 @@ export default function AdminCoupons() {
   async function handleSave() {
     if (!editing) return
     if (editing.requires_code && !editing.code?.trim()) {
-      toast.error('A code is required unless this coupon applies automatically')
+      toast.error(t.adminCodeRequired)
       return
     }
     setSaving(true)
@@ -139,21 +143,21 @@ export default function AdminCoupons() {
         if (error) throw error
       }
 
-      toast.success(editing.id ? 'Coupon updated' : 'Coupon created')
+      toast.success(editing.id ? t.adminCouponUpdated : t.adminCouponCreated)
       setEditing(null)
       load()
     } catch (e: any) {
-      toast.error(e.message || 'Something went wrong')
+      toast.error(e.message || t.adminGenericError)
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete(c: Coupon) {
-    if (!confirm(`Delete ${c.code || 'this auto-promotion'}?`)) return
+    if (!confirm(t.adminCouponDeleteConfirm(c.code || t.adminThisAutoPromotion))) return
     const { error } = await supabase.from('coupons').delete().eq('id', c.id)
     if (error) { toast.error(error.message); return }
-    toast.success('Coupon deleted')
+    toast.success(t.adminCouponDeleted)
     load()
   }
 
@@ -169,14 +173,14 @@ export default function AdminCoupons() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <p className="text-sm text-muted-foreground">{coupons.length} coupon{coupons.length === 1 ? '' : 's'}</p>
+        <p className="text-sm text-muted-foreground">{t.adminCouponCount(coupons.length)}</p>
         {isAdmin && (
           <button
             onClick={openNew}
             className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm tracking-wider hover:bg-primary/90 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Add coupon
+            {t.adminAddCoupon}
           </button>
         )}
       </div>
@@ -191,42 +195,42 @@ export default function AdminCoupons() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs tracking-widest uppercase text-muted-foreground">
                 <tr>
-                  <th className="text-start px-4 py-3">Code</th>
-                  <th className="text-start px-4 py-3">Discount</th>
-                  <th className="text-start px-4 py-3">Stackable</th>
-                  <th className="text-start px-4 py-3">Active</th>
-                  <th className="text-start px-4 py-3">Usage</th>
-                  <th className="text-start px-4 py-3">Dates</th>
-                  <th className="text-end px-4 py-3">Actions</th>
+                  <th className="text-start px-4 py-3">{t.adminCouponCode}</th>
+                  <th className="text-start px-4 py-3">{t.adminDiscount}</th>
+                  <th className="text-start px-4 py-3">{t.adminCouponStackable}</th>
+                  <th className="text-start px-4 py-3">{t.adminActiveLabel}</th>
+                  <th className="text-start px-4 py-3">{t.adminCouponUsage}</th>
+                  <th className="text-start px-4 py-3">{t.adminCouponDates}</th>
+                  <th className="text-end px-4 py-3">{t.adminActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {coupons.map(c => (
                   <tr key={c.id} className="border-t border-border">
                     <td className="px-4 py-3">
-                      <p className="font-mono font-medium">{c.code || 'Auto-apply'}</p>
+                      <p className="font-mono font-medium">{c.code || t.adminCouponAutoApply}</p>
                       {c.description && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{c.description}</p>}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{discountLabel(c, formatPrice)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{c.stackable ? 'Yes' : '—'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{discountLabel(c, formatPrice, t)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.stackable ? t.yes : t.dash}</td>
                     <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={c.active}
                         onChange={() => toggleActive(c)}
                         className="w-4 h-4 cursor-pointer"
-                        aria-label="Active"
+                        aria-label={t.adminActiveLabel}
                       />
                     </td>
                     <td className="px-4 py-3">
                       {usageCounts[c.id] || 0} / {c.usage_limit ?? '∞'}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{dateRangeLabel(c)}</td>
+                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{dateRangeLabel(c, t)}</td>
                     <td className="px-4 py-3 text-end">
-                      <button onClick={() => openEdit(c)} className="p-1.5 hover:bg-muted cursor-pointer" aria-label="Edit coupon">
+                      <button onClick={() => openEdit(c)} className="p-1.5 hover:bg-muted cursor-pointer" aria-label={t.adminEditCoupon}>
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDelete(c)} className="p-1.5 hover:bg-muted text-red-700 cursor-pointer" aria-label="Delete coupon">
+                      <button onClick={() => handleDelete(c)} className="p-1.5 hover:bg-muted text-red-700 cursor-pointer" aria-label={t.adminDeleteCoupon}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
@@ -234,7 +238,7 @@ export default function AdminCoupons() {
                 ))}
                 {coupons.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No coupons yet</td>
+                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">{t.adminNoCoupons}</td>
                   </tr>
                 )}
               </tbody>
@@ -247,8 +251,8 @@ export default function AdminCoupons() {
         <div className="fixed inset-0 z-50 bg-foreground/50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-background w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-background z-10">
-              <h2 className="font-display text-2xl">{editing.id ? 'Edit coupon' : 'New coupon'}</h2>
-              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer" aria-label="Close">
+              <h2 className="font-display text-2xl">{editing.id ? t.adminEditCoupon : t.adminNewCoupon}</h2>
+              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer" aria-label={t.adminClose}>
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -260,15 +264,15 @@ export default function AdminCoupons() {
                   onChange={e => setEditing({ ...editing, requires_code: e.target.checked })}
                   className="w-4 h-4"
                 />
-                <span className="text-sm">{editing.requires_code ? 'Requires a code' : 'Applies automatically'}</span>
+                <span className="text-sm">{editing.requires_code ? t.adminRequiresCode : t.adminAppliesAutomatically}</span>
               </label>
 
               {editing.requires_code && (
-                <Field label="Code" value={editing.code || ''} onChange={v => setEditing({ ...editing, code: v.toUpperCase() })} />
+                <Field label={t.adminCouponCode} value={editing.code || ''} onChange={v => setEditing({ ...editing, code: v.toUpperCase() })} />
               )}
 
               <div>
-                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Description</label>
+                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminDescription}</label>
                 <textarea
                   value={editing.description || ''}
                   onChange={e => setEditing({ ...editing, description: e.target.value })}
@@ -279,20 +283,20 @@ export default function AdminCoupons() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Discount type</label>
+                  <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminDiscountType}</label>
                   <select
                     value={editing.discount_type || 'percentage'}
                     onChange={e => setEditing({ ...editing, discount_type: e.target.value as Coupon['discount_type'] })}
                     className="w-full bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none cursor-pointer"
                   >
-                    <option value="percentage">Percentage</option>
-                    <option value="fixed">Fixed amount</option>
-                    <option value="free_shipping">Free shipping</option>
-                    <option value="buy_x_get_y">Buy X Get Y</option>
+                    <option value="percentage">{t.adminPercentage}</option>
+                    <option value="fixed">{t.adminFixedAmount}</option>
+                    <option value="free_shipping">{t.adminFreeShipping}</option>
+                    <option value="buy_x_get_y">{t.adminBuyXGetY}</option>
                   </select>
                 </div>
                 <Field
-                  label={editing.discount_type === 'percentage' ? 'Discount (%)' : `Discount (${currency})`}
+                  label={editing.discount_type === 'percentage' ? t.adminDiscountPercentField : t.adminDiscountAmountField(currency)}
                   type="number"
                   value={String(editing.discount_value ?? 0)}
                   onChange={v => setEditing({ ...editing, discount_value: Number(v) })}
@@ -302,25 +306,25 @@ export default function AdminCoupons() {
 
               {editing.discount_type === 'buy_x_get_y' && (
                 <div className="grid grid-cols-3 gap-4">
-                  <Field label="Buy quantity" type="number" value={editing.buy_quantity != null ? String(editing.buy_quantity) : ''} onChange={v => setEditing({ ...editing, buy_quantity: v === '' ? null : Number(v) })} />
-                  <Field label="Get quantity" type="number" value={editing.get_quantity != null ? String(editing.get_quantity) : ''} onChange={v => setEditing({ ...editing, get_quantity: v === '' ? null : Number(v) })} />
-                  <Field label="Get discount (%)" type="number" value={editing.get_discount_percent != null ? String(editing.get_discount_percent) : ''} onChange={v => setEditing({ ...editing, get_discount_percent: v === '' ? null : Number(v) })} />
+                  <Field label={t.adminBuyQuantity} type="number" value={editing.buy_quantity != null ? String(editing.buy_quantity) : ''} onChange={v => setEditing({ ...editing, buy_quantity: v === '' ? null : Number(v) })} />
+                  <Field label={t.adminGetQuantity} type="number" value={editing.get_quantity != null ? String(editing.get_quantity) : ''} onChange={v => setEditing({ ...editing, get_quantity: v === '' ? null : Number(v) })} />
+                  <Field label={t.adminGetDiscountPercent} type="number" value={editing.get_discount_percent != null ? String(editing.get_discount_percent) : ''} onChange={v => setEditing({ ...editing, get_discount_percent: v === '' ? null : Number(v) })} />
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
-                <Field label={`Min order amount (${currency})`} type="number" value={editing.min_order_amount != null ? String(editing.min_order_amount) : ''} onChange={v => setEditing({ ...editing, min_order_amount: v === '' ? null : Number(v) })} />
-                <Field label={`Max discount amount (${currency})`} type="number" value={editing.max_discount_amount != null ? String(editing.max_discount_amount) : ''} onChange={v => setEditing({ ...editing, max_discount_amount: v === '' ? null : Number(v) })} />
+                <Field label={t.adminMinOrderAmount(currency)} type="number" value={editing.min_order_amount != null ? String(editing.min_order_amount) : ''} onChange={v => setEditing({ ...editing, min_order_amount: v === '' ? null : Number(v) })} />
+                <Field label={t.adminMaxDiscountAmount(currency)} type="number" value={editing.max_discount_amount != null ? String(editing.max_discount_amount) : ''} onChange={v => setEditing({ ...editing, max_discount_amount: v === '' ? null : Number(v) })} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Usage limit (total)" type="number" value={editing.usage_limit != null ? String(editing.usage_limit) : ''} onChange={v => setEditing({ ...editing, usage_limit: v === '' ? null : Number(v) })} />
-                <Field label="Per-customer limit" type="number" value={editing.per_customer_limit != null ? String(editing.per_customer_limit) : ''} onChange={v => setEditing({ ...editing, per_customer_limit: v === '' ? null : Number(v) })} />
+                <Field label={t.adminUsageLimit} type="number" value={editing.usage_limit != null ? String(editing.usage_limit) : ''} onChange={v => setEditing({ ...editing, usage_limit: v === '' ? null : Number(v) })} />
+                <Field label={t.adminPerCustomerLimit} type="number" value={editing.per_customer_limit != null ? String(editing.per_customer_limit) : ''} onChange={v => setEditing({ ...editing, per_customer_limit: v === '' ? null : Number(v) })} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Starts at" type="datetime-local" value={toLocalInput(editing.starts_at)} onChange={v => setEditing({ ...editing, starts_at: fromLocalInput(v) })} />
-                <Field label="Ends at" type="datetime-local" value={toLocalInput(editing.ends_at)} onChange={v => setEditing({ ...editing, ends_at: fromLocalInput(v) })} />
+                <Field label={t.adminStartsAt} type="datetime-local" value={toLocalInput(editing.starts_at)} onChange={v => setEditing({ ...editing, starts_at: fromLocalInput(v) })} />
+                <Field label={t.adminEndsAt} type="datetime-local" value={toLocalInput(editing.ends_at)} onChange={v => setEditing({ ...editing, ends_at: fromLocalInput(v) })} />
               </div>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -330,7 +334,7 @@ export default function AdminCoupons() {
                   onChange={e => setEditing({ ...editing, active: e.target.checked })}
                   className="w-4 h-4"
                 />
-                <span className="text-sm">Active</span>
+                <span className="text-sm">{t.adminActiveLabel}</span>
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -340,19 +344,19 @@ export default function AdminCoupons() {
                   onChange={e => setEditing({ ...editing, stackable: e.target.checked })}
                   className="w-4 h-4"
                 />
-                <span className="text-sm">Stackable with a qualifying bundle</span>
+                <span className="text-sm">{t.adminStackableLabel}</span>
               </label>
 
               <div className="pt-2 border-t border-border">
-                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2 mt-4">Applies to</label>
+                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2 mt-4">{t.adminAppliesTo}</label>
                 <select
                   value={editing.target_type || 'all'}
                   onChange={e => setEditing({ ...editing, target_type: e.target.value as Coupon['target_type'] })}
                   className="w-full bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none cursor-pointer"
                 >
-                  <option value="all">Whole order</option>
-                  <option value="category">A category</option>
-                  <option value="products">Specific products</option>
+                  <option value="all">{t.adminWholeOrder}</option>
+                  <option value="category">{t.adminACategory}</option>
+                  <option value="products">{t.adminSpecificProducts}</option>
                 </select>
 
                 {editing.target_type === 'category' && (
@@ -361,7 +365,7 @@ export default function AdminCoupons() {
                     onChange={e => setEditing({ ...editing, target_category: e.target.value })}
                     className="w-full mt-3 bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none cursor-pointer"
                   >
-                    <option value="" disabled>Select a category</option>
+                    <option value="" disabled>{t.adminSelectCategory}</option>
                     {CATEGORY_VALUES.map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
@@ -370,7 +374,7 @@ export default function AdminCoupons() {
 
                 {editing.target_type === 'products' && (
                   <div className="mt-3 max-h-48 overflow-y-auto border border-border p-3 space-y-2">
-                    {products.length === 0 && <p className="text-sm text-muted-foreground">No products yet</p>}
+                    {products.length === 0 && <p className="text-sm text-muted-foreground">{t.adminNoProductsYet}</p>}
                     {products.map(p => (
                       <label key={p.id} className="flex items-center gap-2 cursor-pointer text-sm">
                         <input
@@ -388,7 +392,7 @@ export default function AdminCoupons() {
             </div>
             <div className="p-6 border-t border-border flex items-center justify-end gap-3 sticky bottom-0 bg-background">
               <button onClick={() => setEditing(null)} className="px-5 py-2.5 text-sm border border-border hover:bg-muted cursor-pointer">
-                Cancel
+                {t.adminCancel}
               </button>
               <button
                 onClick={handleSave}
@@ -396,7 +400,7 @@ export default function AdminCoupons() {
                 className="px-5 py-2.5 text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer flex items-center gap-2"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {editing.id ? 'Save' : 'Create'}
+                {editing.id ? t.adminSaveBtn : t.adminCreateBtn}
               </button>
             </div>
           </div>

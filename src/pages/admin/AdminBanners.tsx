@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, HeroBanner } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useT } from '@/contexts/LanguageContext'
 import { Loader2, Plus, X, Edit2, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -14,6 +15,7 @@ export default function AdminBanners() {
   const [editing, setEditing] = useState<Partial<HeroBanner> | null>(null)
   const [saving, setSaving] = useState(false)
   const { isAdmin } = useAuth()
+  const t = useT()
 
   async function load() {
     setLoading(true)
@@ -57,7 +59,7 @@ export default function AdminBanners() {
 
   async function handleSave() {
     if (!editing) return
-    if (!editing.title?.trim()) { toast.error('Title is required'); return }
+    if (!editing.title?.trim()) { toast.error(t.adminBannerTitleRequired); return }
     setSaving(true)
     try {
       const payload = {
@@ -78,35 +80,35 @@ export default function AdminBanners() {
         if (error) throw error
       }
 
-      toast.success(editing.id ? 'Banner updated' : 'Banner created')
+      toast.success(editing.id ? t.adminBannerUpdated : t.adminBannerCreated)
       setEditing(null)
       load()
     } catch (e: any) {
-      toast.error(e.message || 'Something went wrong')
+      toast.error(e.message || t.adminGenericError)
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete(b: HeroBanner) {
-    if (!confirm(`Delete "${b.title}"?`)) return
+    if (!confirm(t.adminDeleteConfirm(b.title))) return
     const { error } = await supabase.from('hero_banners').delete().eq('id', b.id)
     if (error) { toast.error(error.message); return }
-    toast.success('Banner deleted')
+    toast.success(t.adminBannerDeleted)
     load()
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <p className="text-sm text-muted-foreground">{banners.length} banner{banners.length === 1 ? '' : 's'}</p>
+        <p className="text-sm text-muted-foreground">{t.adminBannerCount(banners.length)}</p>
         {isAdmin && (
           <button
             onClick={openNew}
             className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm tracking-wider hover:bg-primary/90 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Add banner
+            {t.adminAddBanner}
           </button>
         )}
       </div>
@@ -121,11 +123,11 @@ export default function AdminBanners() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs tracking-widest uppercase text-muted-foreground">
                 <tr>
-                  <th className="text-start px-4 py-3">Order</th>
-                  <th className="text-start px-4 py-3">Banner</th>
-                  <th className="text-start px-4 py-3">CTA</th>
-                  <th className="text-start px-4 py-3">Active</th>
-                  <th className="text-end px-4 py-3">Actions</th>
+                  <th className="text-start px-4 py-3">{t.adminBannerOrderCol}</th>
+                  <th className="text-start px-4 py-3">{t.adminBannerCol}</th>
+                  <th className="text-start px-4 py-3">{t.adminBannerCta}</th>
+                  <th className="text-start px-4 py-3">{t.adminActiveLabel}</th>
+                  <th className="text-end px-4 py-3">{t.adminActions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,7 +139,7 @@ export default function AdminBanners() {
                           onClick={() => move(b, -1)}
                           disabled={idx === 0}
                           className="p-1 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                          aria-label="Move up"
+                          aria-label={t.adminMoveUp}
                         >
                           <ArrowUp className="w-3.5 h-3.5" />
                         </button>
@@ -145,7 +147,7 @@ export default function AdminBanners() {
                           onClick={() => move(b, 1)}
                           disabled={idx === banners.length - 1}
                           className="p-1 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                          aria-label="Move down"
+                          aria-label={t.adminMoveDown}
                         >
                           <ArrowDown className="w-3.5 h-3.5" />
                         </button>
@@ -163,7 +165,7 @@ export default function AdminBanners() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {b.cta_text || '—'}
+                      {b.cta_text || t.dash}
                     </td>
                     <td className="px-4 py-3">
                       <input
@@ -171,14 +173,14 @@ export default function AdminBanners() {
                         checked={b.active}
                         onChange={() => toggleActive(b)}
                         className="w-4 h-4 cursor-pointer"
-                        aria-label="Active"
+                        aria-label={t.adminActiveLabel}
                       />
                     </td>
                     <td className="px-4 py-3 text-end">
-                      <button onClick={() => openEdit(b)} className="p-1.5 hover:bg-muted cursor-pointer" aria-label="Edit banner">
+                      <button onClick={() => openEdit(b)} className="p-1.5 hover:bg-muted cursor-pointer" aria-label={t.adminEditBanner}>
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDelete(b)} className="p-1.5 hover:bg-muted text-red-700 cursor-pointer" aria-label="Delete banner">
+                      <button onClick={() => handleDelete(b)} className="p-1.5 hover:bg-muted text-red-700 cursor-pointer" aria-label={t.adminDeleteBanner}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
@@ -186,7 +188,7 @@ export default function AdminBanners() {
                 ))}
                 {banners.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">No banners yet</td>
+                    <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">{t.adminNoBanners}</td>
                   </tr>
                 )}
               </tbody>
@@ -199,15 +201,15 @@ export default function AdminBanners() {
         <div className="fixed inset-0 z-50 bg-foreground/50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-background w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-background z-10">
-              <h2 className="font-display text-2xl">{editing.id ? 'Edit banner' : 'New banner'}</h2>
-              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer" aria-label="Close">
+              <h2 className="font-display text-2xl">{editing.id ? t.adminEditBanner : t.adminNewBanner}</h2>
+              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer" aria-label={t.adminClose}>
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-5">
-              <Field label="Title" value={editing.title || ''} onChange={v => setEditing({ ...editing, title: v })} />
+              <Field label={t.adminBannerTitleField} value={editing.title || ''} onChange={v => setEditing({ ...editing, title: v })} />
               <div>
-                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Subtitle</label>
+                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminBannerSubtitle}</label>
                 <textarea
                   value={editing.subtitle || ''}
                   onChange={e => setEditing({ ...editing, subtitle: e.target.value })}
@@ -216,17 +218,17 @@ export default function AdminBanners() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="CTA text" value={editing.cta_text || ''} onChange={v => setEditing({ ...editing, cta_text: v })} />
-                <Field label="CTA link" value={editing.cta_link || ''} onChange={v => setEditing({ ...editing, cta_link: v })} placeholder="/shop?category=Boots" />
+                <Field label={t.adminBannerCtaText} value={editing.cta_text || ''} onChange={v => setEditing({ ...editing, cta_text: v })} />
+                <Field label={t.adminBannerCtaLink} value={editing.cta_link || ''} onChange={v => setEditing({ ...editing, cta_link: v })} placeholder="/shop?category=Boots" />
               </div>
-              <Field label="Image URL" value={editing.image_url || ''} onChange={v => setEditing({ ...editing, image_url: v })} placeholder="https://…" />
+              <Field label={t.adminImageUrl} value={editing.image_url || ''} onChange={v => setEditing({ ...editing, image_url: v })} placeholder="https://…" />
               {editing.image_url && (
                 <div className="w-full aspect-[21/9] bg-muted overflow-hidden">
                   <img src={editing.image_url} alt="" className="w-full h-full object-cover" />
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4 items-end">
-                <Field label="Position" type="number" value={String(editing.position ?? 0)} onChange={v => setEditing({ ...editing, position: Number(v) })} />
+                <Field label={t.adminPosition} type="number" value={String(editing.position ?? 0)} onChange={v => setEditing({ ...editing, position: Number(v) })} />
                 <label className="flex items-center gap-2 cursor-pointer pb-2.5">
                   <input
                     type="checkbox"
@@ -234,13 +236,13 @@ export default function AdminBanners() {
                     onChange={e => setEditing({ ...editing, active: e.target.checked })}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm">Active</span>
+                  <span className="text-sm">{t.adminActiveLabel}</span>
                 </label>
               </div>
             </div>
             <div className="p-6 border-t border-border flex items-center justify-end gap-3 sticky bottom-0 bg-background">
               <button onClick={() => setEditing(null)} className="px-5 py-2.5 text-sm border border-border hover:bg-muted cursor-pointer">
-                Cancel
+                {t.adminCancel}
               </button>
               <button
                 onClick={handleSave}
@@ -248,7 +250,7 @@ export default function AdminBanners() {
                 className="px-5 py-2.5 text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer flex items-center gap-2"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {editing.id ? 'Save' : 'Create'}
+                {editing.id ? t.adminSaveBtn : t.adminCreateBtn}
               </button>
             </div>
           </div>
