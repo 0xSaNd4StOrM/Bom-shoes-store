@@ -31,7 +31,7 @@ export default function Account() {
   const { formatPrice } = useCurrency()
 
   useSeo({
-    title: 'My Account — BOM Store',
+    title: 'My Account · BOM Store',
     description: 'View your order history and wishlist.',
     noindex: true,
   })

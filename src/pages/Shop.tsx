@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react'
 import QuickViewModal from '@/components/QuickViewModal'
 import ProductCard from '@/components/ProductCard'
 import { useSeo } from '@/hooks/useSeo'
+import { categoryLabel } from '@/lib/categories'
 
 const CATEGORY_VALUES = ['All', 'Sneakers', 'Boots', 'Loafers', 'Derbies', 'Slippers', 'Sandals']
 const SORT_VALUES = ['featured', 'price-asc', 'price-desc', 'newest']
@@ -31,19 +32,6 @@ export default function Shop() {
   const { lang } = useLanguage()
   const { addItem } = useCart()
 
-  function categoryLabel(c: string): string {
-    switch (c) {
-      case 'All': return t.shopAll
-      case 'Sneakers': return t.navSneakers
-      case 'Boots': return t.navBoots
-      case 'Loafers': return t.navLoafers
-      case 'Derbies': return t.navDerbies
-      case 'Slippers': return t.navSlippers
-      case 'Sandals': return t.navSandals
-      default: return c
-    }
-  }
-
   function sortLabel(s: string): string {
     switch (s) {
       case 'featured': return t.shopSortFeatured
@@ -59,10 +47,10 @@ export default function Shop() {
   // in the header above.
   useSeo({
     title: search
-      ? `${t.shopSearchingFor(search)} — ${t.brandName}`
+      ? `${t.shopSearchingFor(search)} · ${t.brandName}`
       : category !== 'All'
-      ? `${categoryLabel(category)} — ${t.shopTitle} — ${t.brandName}`
-      : `${t.shopTitle} — ${t.brandName}`,
+      ? `${categoryLabel(t, category)} · ${t.shopTitle} · ${t.brandName}`
+      : `${t.shopTitle} · ${t.brandName}`,
     description: t.shopSubtitle,
   })
 
@@ -211,7 +199,7 @@ export default function Shop() {
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {categoryLabel(c)}
+                  {categoryLabel(t, c)}
                 </button>
               ))}
             </div>
@@ -323,7 +311,7 @@ export default function Shop() {
                   <ProductCard
                     key={p.id}
                     product={p}
-                    categoryLabel={categoryLabel(p.category)}
+                    categoryLabel={categoryLabel(t, p.category)}
                     bxgyBadge={bxgyBadge}
                     onQuickView={setQuickViewId}
                     onQuickAdd={quickAdd}

@@ -19,7 +19,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
 
   useSeo({
-    title: 'Sign In — BOM Store',
+    title: 'Sign In · BOM Store',
     description: 'Sign in to your BOM Store account to track orders and manage your wishlist.',
   })
 

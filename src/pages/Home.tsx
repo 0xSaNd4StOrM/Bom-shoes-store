@@ -14,6 +14,7 @@ import SectionHeading from '@/components/SectionHeading'
 import CountdownTimer from '@/components/CountdownTimer'
 import QuickViewModal from '@/components/QuickViewModal'
 import { useSeo } from '@/hooks/useSeo'
+import { categoryLabel } from '@/lib/categories'
 
 // Homepage hero banner slide, sourced from the admin-managed hero_banners
 // table. Rendered instead of the hardcoded hero below when >=1 active banner
@@ -104,7 +105,7 @@ export default function Home() {
   const { addItem } = useCart()
   const revealRefs = useRef<HTMLElement[]>([])
 
-  useSeo({ title: `${t.brandName} — ${t.brandTagline}`, description: t.homeHeroSubtitle })
+  useSeo({ title: `${t.brandName} · ${t.brandTagline}`, description: t.homeHeroSubtitle })
 
   useEffect(() => {
     async function load() {
@@ -220,18 +221,6 @@ export default function Home() {
   const addRevealRef = (el: HTMLElement | null) => {
     if (el && !revealRefs.current.includes(el)) {
       revealRefs.current.push(el)
-    }
-  }
-
-  function categoryLabel(c: string): string {
-    switch (c) {
-      case 'Sneakers': return t.navSneakers
-      case 'Boots': return t.navBoots
-      case 'Loafers': return t.navLoafers
-      case 'Derbies': return t.navDerbies
-      case 'Slippers': return t.navSlippers
-      case 'Sandals': return t.navSandals
-      default: return c
     }
   }
 
@@ -392,7 +381,7 @@ export default function Home() {
                   to={`/shop?category=${cat}`}
                   className="px-4 py-2 text-[12px] tracking-[0.1em] uppercase border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors"
                 >
-                  {categoryLabel(cat)}
+                  {categoryLabel(t, cat)}
                 </Link>
               ))}
           <Link
@@ -432,7 +421,7 @@ export default function Home() {
                   <ProductCard
                     key={p.id}
                     product={p}
-                    categoryLabel={categoryLabel(p.category)}
+                    categoryLabel={categoryLabel(t, p.category)}
                     onQuickView={setQuickViewId}
                     onQuickAdd={quickAdd}
                     quickAdding={quickAddingId === p.id}

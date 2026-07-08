@@ -216,7 +216,7 @@ export const translations = {
     reviewsRatingRequired: 'Please select a rating',
     reviewsSubmitSuccess: 'Thanks for your review',
     reviewsUpdateSuccess: 'Your review was updated',
-    reviewsAlreadyReviewed: "You've already reviewed this product — edit it below",
+    reviewsAlreadyReviewed: "You've already reviewed this product, edit it below",
     reviewsError: 'Could not submit your review',
 
     // Back in stock notify
@@ -224,7 +224,7 @@ export const translations = {
     notifyEmailPlaceholder: 'Your email address',
     notifyButton: 'Notify me',
     notifyEmailRequired: 'Please enter your email',
-    notifySuccess: "You're on the list — we'll email you when it's back",
+    notifySuccess: "You're on the list, we'll email you when it's back",
     notifyAlready: "You're already on the list for this item",
     notifyError: 'Could not save your request',
 
@@ -398,7 +398,7 @@ export const translations = {
     adminStatus: 'Status',
     adminNoOrdersFilter: 'No orders in this state',
     adminUpdated: 'Order updated',
-    adminNewOrderToast: (ref: string, name: string, total: string) => `New order ${ref} from ${name} — ${total}`,
+    adminNewOrderToast: (ref: string, name: string, total: string) => `New order ${ref} from ${name} · ${total}`,
 
     // Status labels
     statusPending: 'pending',
@@ -638,7 +638,7 @@ export const translations = {
     reviewsRatingRequired: 'يرجى اختيار تقييم',
     reviewsSubmitSuccess: 'شكرا على تقييمك',
     reviewsUpdateSuccess: 'تم تحديث تقييمك',
-    reviewsAlreadyReviewed: 'لقد قيمت هذا المنتج من قبل — عدل تقييمك أدناه',
+    reviewsAlreadyReviewed: 'لقد قيمت هذا المنتج من قبل، عدل تقييمك أدناه',
     reviewsError: 'تعذر إرسال تقييمك',
 
     // Back in stock notify
@@ -820,7 +820,7 @@ export const translations = {
     adminStatus: 'الحالة',
     adminNoOrdersFilter: 'لا طلبات في هذه الحالة',
     adminUpdated: 'تم تحديث الطلب',
-    adminNewOrderToast: (ref: string, name: string, total: string) => `طلب جديد ${ref} من ${name} — ${total}`,
+    adminNewOrderToast: (ref: string, name: string, total: string) => `طلب جديد ${ref} من ${name} · ${total}`,
 
     // Status labels
     statusPending: 'بالانتظار',

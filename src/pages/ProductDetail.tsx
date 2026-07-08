@@ -343,7 +343,7 @@ export default function ProductDetail() {
   // Real product name/description/first image once loaded; the generic
   // brand fallback below is only ever seen transiently while it's fetching.
   useSeo({
-    title: product ? `${product.name} — ${t.brandName}` : t.brandName,
+    title: product ? `${product.name} · ${t.brandName}` : t.brandName,
     description: product ? (product.description || t.homeHeroSubtitle) : t.homeHeroSubtitle,
     image: heroImage,
   })

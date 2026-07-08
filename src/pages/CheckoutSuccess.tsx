@@ -12,7 +12,7 @@ export default function CheckoutSuccess() {
   const cleared = useRef(false)
   const t = useT()
 
-  useSeo({ title: `${t.successTitle} — ${t.brandName}`, description: t.successDesc })
+  useSeo({ title: `${t.successTitle} · ${t.brandName}`, description: t.successDesc })
 
   // Payment confirmation is no longer trusted from the client: this page is
   // just where Kashier redirects the browser back to, which can happen

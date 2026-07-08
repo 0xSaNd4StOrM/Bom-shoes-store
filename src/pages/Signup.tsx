@@ -17,7 +17,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false)
 
   useSeo({
-    title: 'Create Account — BOM Store',
+    title: 'Create Account · BOM Store',
     description: 'Create a BOM Store account to start shopping handcrafted, built-to-last shoes.',
   })
 

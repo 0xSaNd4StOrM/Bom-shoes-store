@@ -19,7 +19,7 @@ export default function Cart() {
   const { lang } = useLanguage()
   const { formatPrice } = useCurrency()
 
-  useSeo({ title: `${t.cart} — ${t.brandName}`, description: t.cartEmptyDesc })
+  useSeo({ title: `${t.cart} · ${t.brandName}`, description: t.cartEmptyDesc })
 
   const [couponInput, setCouponInput] = useState('')
   const [applying, setApplying] = useState(false)
@@ -222,7 +222,7 @@ export default function Cart() {
                   <div className="flex items-center justify-between gap-3 text-sm border border-border px-3 py-2">
                     <span className="truncate">
                       {couponCode}
-                      {discount?.description ? ` — ${discount.description}` : ''}
+                      {discount?.description ? ` · ${discount.description}` : ''}
                     </span>
                     <button
                       type="button"

@@ -34,7 +34,7 @@ export default function AdminLayout() {
   // covers all of them (dashboard, products, orders, coupons, banners,
   // users, activity log) with no per-page repetition.
   useSeo({
-    title: 'Admin — BOM Store',
+    title: 'Admin · BOM Store',
     description: 'BOM Store admin console.',
     noindex: true,
   })

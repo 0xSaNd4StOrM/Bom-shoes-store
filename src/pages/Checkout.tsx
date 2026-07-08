@@ -19,7 +19,7 @@ export default function Checkout() {
   const { lang } = useLanguage()
   const { formatPrice } = useCurrency()
 
-  useSeo({ title: `${t.checkoutShipping} — ${t.brandName}`, description: t.checkoutPaymentDesc })
+  useSeo({ title: `${t.checkoutShipping} · ${t.brandName}`, description: t.checkoutPaymentDesc })
 
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
