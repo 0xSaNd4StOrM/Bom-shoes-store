@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase, Order } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
-import { Loader2, ChevronDown } from 'lucide-react'
+import { Loader2, ChevronDown, ChevronUp, Search } from 'lucide-react'
 import { toast } from 'sonner'
+
+type SortKey = 'date' | 'total'
+type SortDir = 'asc' | 'desc'
 
 const STATUS_VALUES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
 const STATUS_LABEL_MAP: Record<string, string> = {
@@ -22,9 +25,21 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const { isAdmin } = useAuth()
   const t = useT()
   const { formatPrice } = useCurrency()
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(dir => (dir === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
 
   async function load() {
     setLoading(true)
@@ -47,7 +62,27 @@ export default function AdminOrders() {
     load()
   }
 
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    let rows = filter === 'all' ? orders : orders.filter(o => o.status === filter)
+    if (q) {
+      rows = rows.filter(o =>
+        (o.customer_name || '').toLowerCase().includes(q) ||
+        (o.customer_email || '').toLowerCase().includes(q) ||
+        (o.kashier_order_id || '').toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q)
+      )
+    }
+    if (sortKey) {
+      rows = [...rows].sort((a, b) => {
+        const diff = sortKey === 'date'
+          ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          : Number(a.total_amount) - Number(b.total_amount)
+        return sortDir === 'asc' ? diff : -diff
+      })
+    }
+    return rows
+  }, [orders, filter, search, sortKey, sortDir])
 
   function statusLabel(s: string): string {
     const key = STATUS_LABEL_MAP[s]
@@ -75,6 +110,17 @@ export default function AdminOrders() {
         <p className="text-sm text-muted-foreground">{filtered.length} {filtered.length === 1 ? t.piece : t.pieces}</p>
       </div>
 
+      <div className="relative mb-4 max-w-sm">
+        <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={t.adminSearchOrders}
+          className="w-full bg-transparent border border-border ps-9 pe-3 py-2 text-sm focus:border-foreground outline-none"
+        />
+      </div>
+
       {loading ? (
         <div className="py-24 flex justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -91,9 +137,27 @@ export default function AdminOrders() {
                 <tr>
                   <th className="text-start px-4 py-3">{t.adminOrder}</th>
                   <th className="text-start px-4 py-3">{t.adminCustomer}</th>
-                  <th className="text-start px-4 py-3">{t.adminDate}</th>
+                  <th className="text-start px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('date')}
+                      className="inline-flex items-center gap-1 cursor-pointer hover:text-foreground"
+                    >
+                      {t.adminDate}
+                      {sortKey === 'date' && (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </button>
+                  </th>
                   <th className="text-start px-4 py-3">{t.adminItems}</th>
-                  <th className="text-start px-4 py-3">{t.adminTotal}</th>
+                  <th className="text-start px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('total')}
+                      className="inline-flex items-center gap-1 cursor-pointer hover:text-foreground"
+                    >
+                      {t.adminTotal}
+                      {sortKey === 'total' && (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </button>
+                  </th>
                   <th className="text-start px-4 py-3">{t.adminPayment}</th>
                   <th className="text-start px-4 py-3">{t.adminStatus}</th>
                 </tr>

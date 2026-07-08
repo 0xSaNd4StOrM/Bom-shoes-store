@@ -6,7 +6,8 @@ import { useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useSeo } from '@/hooks/useSeo'
 import { supabase, Order } from '@/lib/supabase'
-import { Package, LayoutDashboard, ListOrdered, Tag, LogOut, Image, Users, History, Settings, Gift, PanelTop } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Package, LayoutDashboard, ListOrdered, Tag, LogOut, Image, Users, History, Settings, Gift, PanelTop, Menu, X } from 'lucide-react'
 
 // Shared chrome (header + nav tabs) for every /admin/* screen. Nested under
 // a single <Route path="/admin"> in App.tsx so this renders once and each
@@ -18,6 +19,10 @@ export default function AdminLayout() {
   const { formatPrice } = useCurrency()
   const location = useLocation()
   const [unreadOrders, setUnreadOrders] = useState(0)
+  // Mobile sidebar drawer -- same open/close mechanics as Layout.tsx's
+  // `mobileOpen` site nav drawer (fixed overlay + slide-in animation),
+  // closed on every navigation so it doesn't stay open across route changes.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   // Read inside the realtime callback below so an INSERT while already on
   // /admin/orders doesn't bump the badge (a ref avoids re-subscribing the
   // channel effect on every navigation).
@@ -70,6 +75,12 @@ export default function AdminLayout() {
     if (location.pathname === '/admin/orders') setUnreadOrders(0)
   }, [location.pathname])
 
+  // Close the mobile drawer on every navigation (mirrors Layout.tsx, which
+  // closes its drawer via each link's own onClick -- here the nav items are
+  // shared between the persistent sidebar and the drawer, so it's simpler
+  // to just close on route change).
+  useEffect(() => { setMobileNavOpen(false) }, [location.pathname])
+
   const navItems = [
     { to: '/admin', label: t.adminNavOverview, icon: LayoutDashboard, end: true },
     { to: '/admin/products', label: t.adminNavProducts, icon: Package },
@@ -83,52 +94,103 @@ export default function AdminLayout() {
     { to: '/admin/settings', label: t.adminNavSettings, icon: Settings },
   ]
 
+  // Shared between the persistent desktop sidebar and the mobile drawer so
+  // the active-state/badge treatment never drifts between the two.
+  function renderNavItems(onNavigate?: () => void) {
+    return navItems.map(item => (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        end={item.end}
+        onClick={onNavigate}
+        className={({ isActive }) =>
+          cn(
+            'flex items-center gap-3 px-4 py-3 text-sm border-s-2 transition-colors',
+            isActive
+              ? 'border-foreground bg-foreground text-background'
+              : 'border-transparent text-muted-foreground hover:bg-card hover:text-foreground'
+          )
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <item.icon className="w-4 h-4 shrink-0" />
+            <span className="flex-1">{item.label}</span>
+            {!!item.badge && (
+              <span
+                className={cn(
+                  'min-w-[1.1rem] h-[1.1rem] px-1 rounded-full text-[10px] flex items-center justify-center leading-none',
+                  isActive ? 'bg-background text-foreground' : 'bg-foreground text-background'
+                )}
+              >
+                {item.badge > 99 ? '99+' : item.badge}
+              </span>
+            )}
+          </>
+        )}
+      </NavLink>
+    ))
+  }
+
   return (
-    <div className="px-6 lg:px-10 py-10 bg-muted/20 min-h-screen">
-      <div className="max-w-[1400px] mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <div>
-            <p className="text-zen text-muted-foreground mb-2">{t.adminEyebrow}</p>
-            <h1 className="font-display text-3xl md:text-4xl">{t.adminTitle}</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">{profile?.email}</span>
+    <div className="min-h-screen bg-muted/20 flex">
+      {/* Persistent sidebar -- visible from lg upward */}
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 border-e border-border bg-background sticky top-0 h-screen overflow-y-auto">
+        <div className="px-6 py-8">
+          <p className="text-zen text-muted-foreground mb-1">{t.adminEyebrow}</p>
+          <h1 className="font-display text-2xl">{t.adminTitle}</h1>
+        </div>
+        <nav className="flex flex-col gap-1 px-2">{renderNavItems()}</nav>
+      </aside>
+
+      {/* Mobile drawer -- same fixed-overlay + slide-in mechanics as
+          Layout.tsx's site-wide mobile nav. */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-50 bg-background lg:hidden overflow-y-auto slide-in-right">
+          <div className="flex items-center justify-between h-20 px-6 border-b border-border/60">
+            <h1 className="font-display text-xl">{t.adminTitle}</h1>
             <button
-              onClick={signOut}
-              className="p-2 border border-border hover:bg-card transition-colors cursor-pointer"
-              aria-label={t.adminSignOut}
+              onClick={() => setMobileNavOpen(false)}
+              className="p-2 cursor-pointer"
+              aria-label="Close menu"
             >
-              <LogOut className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
+          <nav className="flex flex-col gap-1 p-2">{renderNavItems(() => setMobileNavOpen(false))}</nav>
         </div>
+      )}
 
-        <div className="flex gap-2 border-b border-border mb-8 overflow-x-auto scrollbar-none">
-          {navItems.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-3 text-sm border-b-2 -mb-px transition-colors whitespace-nowrap ${
-                  isActive
-                    ? 'border-foreground text-foreground'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`
-              }
-            >
-              <item.icon className="w-4 h-4" />
-              {item.label}
-              {!!item.badge && (
-                <span className="min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-foreground text-background text-[10px] flex items-center justify-center leading-none">
-                  {item.badge > 99 ? '99+' : item.badge}
-                </span>
-              )}
-            </NavLink>
-          ))}
+      <div className="flex-1 min-w-0 px-6 lg:px-10 py-10">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setMobileNavOpen(true)}
+                className="lg:hidden p-2 -ms-2 border border-border hover:bg-card transition-colors cursor-pointer"
+                aria-label="Open admin menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div className="lg:hidden">
+                <p className="text-zen text-muted-foreground mb-2">{t.adminEyebrow}</p>
+                <h1 className="font-display text-3xl">{t.adminTitle}</h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">{profile?.email}</span>
+              <button
+                onClick={signOut}
+                className="p-2 border border-border hover:bg-card transition-colors cursor-pointer"
+                aria-label={t.adminSignOut}
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <Outlet />
         </div>
-
-        <Outlet />
       </div>
     </div>
   )

@@ -85,6 +85,8 @@ const TRUST_ICONS: Record<string, typeof Truck> = {
 export default function Home() {
   const [featured, setFeatured] = useState<ProductCatalogEntry[]>([])
   const [recent, setRecent] = useState<ProductCatalogEntry[]>([])
+  // null = fetch in flight (render a skeleton); [] = loaded, genuinely empty.
+  const [productsLoading, setProductsLoading] = useState(true)
   const [banners, setBanners] = useState<HeroBanner[]>([])
   const [dropEndsAt, setDropEndsAt] = useState<Date | null>(null)
   // ponytail: no admin-configured auto-apply promo has an end date yet --
@@ -94,8 +96,9 @@ export default function Home() {
   const [quickViewId, setQuickViewId] = useState<string | null>(null)
   const [quickAddingId, setQuickAddingId] = useState<string | null>(null)
   const [content, setContent] = useState<Record<string, any>>({})
-  const [categories, setCategories] = useState<string[]>([])
-  const [testimonials, setTestimonials] = useState<any[]>([])
+  // null = fetch in flight (render a skeleton); [] = loaded, genuinely none configured.
+  const [categories, setCategories] = useState<string[] | null>(null)
+  const [testimonials, setTestimonials] = useState<any[] | null>(null)
   const t = useT()
   const { lang } = useLanguage()
   const { addItem } = useCart()
@@ -118,6 +121,7 @@ export default function Home() {
         .limit(6)
       if (f) setFeatured(f)
       if (r) setRecent(r)
+      setProductsLoading(false)
     }
     load()
   }, [])
@@ -325,7 +329,10 @@ export default function Home() {
 
           {/* Hero product image with float + Shop the Look card */}
           <div className="lg:col-span-5 relative h-[500px] lg:h-[680px] hidden lg:block">
-            {heroProduct && (
+            {productsLoading && (
+              <div className="absolute inset-0 bg-muted/60 animate-pulse" />
+            )}
+            {!productsLoading && heroProduct && (
               <div className="absolute inset-0 reveal-3d" ref={addRevealRef}>
                 <div className="relative w-full h-full float-anim">
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -339,7 +346,7 @@ export default function Home() {
                 </div>
               </div>
             )}
-            {heroProduct && (
+            {!productsLoading && heroProduct && (
               <Link
                 to={`/product/${heroProduct.slug}`}
                 className="group absolute bottom-10 start-0 bg-background/95 backdrop-blur-sm border border-border px-5 py-4 shadow-xl scale-in flex items-center gap-4 hover:shadow-2xl transition-shadow"
@@ -375,15 +382,19 @@ export default function Home() {
           <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground me-2">
             {t.homeCategoriesEyebrow}
           </span>
-          {categories.map(cat => (
-            <Link
-              key={cat}
-              to={`/shop?category=${cat}`}
-              className="px-4 py-2 text-[12px] tracking-[0.1em] uppercase border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors"
-            >
-              {categoryLabel(cat)}
-            </Link>
-          ))}
+          {categories === null
+            ? [1, 2, 3, 4].map(i => (
+                <span key={i} className="h-9 w-24 bg-muted/60 animate-pulse" />
+              ))
+            : categories.map(cat => (
+                <Link
+                  key={cat}
+                  to={`/shop?category=${cat}`}
+                  className="px-4 py-2 text-[12px] tracking-[0.1em] uppercase border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors"
+                >
+                  {categoryLabel(cat)}
+                </Link>
+              ))}
           <Link
             to="/shop"
             className="ms-auto inline-flex items-center gap-2 bg-foreground text-background px-5 py-2 text-[11px] tracking-[0.2em] uppercase font-medium hover:bg-foreground/85 transition-colors"
@@ -409,17 +420,25 @@ export default function Home() {
             className="mb-12 reveal"
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-14">
-            {curated.map((p, i) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                categoryLabel={categoryLabel(p.category)}
-                onQuickView={setQuickViewId}
-                onQuickAdd={quickAdd}
-                quickAdding={quickAddingId === p.id}
-                animationDelay={`${(i % 8) * 60}ms`}
-              />
-            ))}
+            {productsLoading
+              ? [1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="animate-pulse">
+                    <div className="aspect-[4/5] bg-muted/60 mb-4" />
+                    <div className="h-3 w-2/3 bg-muted/60 mb-2" />
+                    <div className="h-3 w-1/3 bg-muted/40" />
+                  </div>
+                ))
+              : curated.map((p, i) => (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    categoryLabel={categoryLabel(p.category)}
+                    onQuickView={setQuickViewId}
+                    onQuickAdd={quickAdd}
+                    quickAdding={quickAddingId === p.id}
+                    animationDelay={`${(i % 8) * 60}ms`}
+                  />
+                ))}
           </div>
         </div>
       </section>
@@ -514,7 +533,7 @@ export default function Home() {
             <p className="text-background/70 font-light leading-relaxed max-w-lg mb-10 text-lg">
               {(lang === 'ar' ? atelierC?.subtitle_ar : atelierC?.subtitle_en) ?? t.homeAtelierSubtitle}
             </p>
-            <div className="grid grid-cols-3 gap-6 mb-10">
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-10">
               {(atelierC?.stats?.length ? atelierC.stats : [
                 { value: 40, label_en: 'years of craft', label_ar: 'years of craft' },
                 { value: 16, label_en: 'pairs of hands', label_ar: 'pairs of hands' },
@@ -538,7 +557,29 @@ export default function Home() {
       </section>
 
       {/* ===== TESTIMONIALS (kept -- social proof, restyled to cream) ===== */}
-      {testimonials.length > 0 && (
+      {testimonials === null && (
+      <section className="py-24 md:py-32 px-6 lg:px-10 bg-cream">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="text-center mb-16">
+            <div className="h-3 w-40 bg-muted/60 animate-pulse mx-auto mb-3" />
+            <div className="h-10 w-72 bg-muted/60 animate-pulse mx-auto" />
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-background p-8 md:p-10 animate-pulse">
+                <div className="h-4 w-full bg-muted/60 mb-3" />
+                <div className="h-4 w-5/6 bg-muted/60 mb-8" />
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-muted/60 shrink-0" />
+                  <div className="h-3 w-24 bg-muted/60" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      )}
+      {testimonials !== null && testimonials.length > 0 && (
       <section className="py-24 md:py-32 px-6 lg:px-10 bg-cream">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16 reveal" ref={addRevealRef}>

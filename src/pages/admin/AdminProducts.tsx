@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase, Product, ProductImage, ProductCatalogEntry } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
-import { Loader2, Plus, X, Edit2, Trash2, Star } from 'lucide-react'
+import { Loader2, Plus, X, Edit2, Trash2, Star, Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
+
+type SortKey = 'name' | 'price'
+type SortDir = 'asc' | 'desc'
 
 const EMPTY: Partial<Product> = {
   name: '', slug: '', description: '', price: 0, category: 'Sneakers',
@@ -54,9 +57,40 @@ export default function AdminProducts() {
   // on products/product_catalog -- see migration comment. Tracked separately
   // here rather than on `editing` since it's not part of the Product type.
   const [costPrice, setCostPrice] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [sortKey, setSortKey] = useState<SortKey | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const { isAdmin } = useAuth()
   const t = useT()
   const { formatPrice } = useCurrency()
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(dir => (dir === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const visibleProducts = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    let rows = products.filter(p => {
+      if (q && !p.name.toLowerCase().includes(q)) return false
+      if (categoryFilter !== 'all' && p.category !== categoryFilter) return false
+      return true
+    })
+    if (sortKey) {
+      rows = [...rows].sort((a, b) => {
+        const diff = sortKey === 'name'
+          ? a.name.localeCompare(b.name)
+          : Number(a.price) - Number(b.price)
+        return sortDir === 'asc' ? diff : -diff
+      })
+    }
+    return rows
+  }, [products, search, categoryFilter, sortKey, sortDir])
 
   async function load() {
     setLoading(true)
@@ -273,7 +307,7 @@ export default function AdminProducts() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <p className="text-sm text-muted-foreground">{t.adminPieces(products.length)}</p>
+        <p className="text-sm text-muted-foreground">{t.adminPieces(visibleProducts.length)}</p>
         {isAdmin && (
           <button
             onClick={openNew}
@@ -283,6 +317,29 @@ export default function AdminProducts() {
             {t.adminAddProduct}
           </button>
         )}
+      </div>
+
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={t.adminSearchProducts}
+            className="w-full bg-transparent border border-border ps-9 pe-3 py-2 text-sm focus:border-foreground outline-none"
+          />
+        </div>
+        <select
+          value={categoryFilter}
+          onChange={e => setCategoryFilter(e.target.value)}
+          className="bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none cursor-pointer"
+        >
+          <option value="all">{t.adminAllCategories}</option>
+          {CATEGORY_VALUES.map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -295,16 +352,34 @@ export default function AdminProducts() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs tracking-widest uppercase text-muted-foreground">
                 <tr>
-                  <th className="text-start px-4 py-3">{t.adminProduct}</th>
+                  <th className="text-start px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('name')}
+                      className="inline-flex items-center gap-1 cursor-pointer hover:text-foreground"
+                    >
+                      {t.adminProduct}
+                      {sortKey === 'name' && (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </button>
+                  </th>
                   <th className="text-start px-4 py-3">{t.adminCategory}</th>
-                  <th className="text-start px-4 py-3">{t.adminPrice}</th>
+                  <th className="text-start px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('price')}
+                      className="inline-flex items-center gap-1 cursor-pointer hover:text-foreground"
+                    >
+                      {t.adminPrice}
+                      {sortKey === 'price' && (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </button>
+                  </th>
                   <th className="text-start px-4 py-3">{t.adminStock}</th>
                   <th className="text-start px-4 py-3">{t.adminFeatured}</th>
                   <th className="text-end px-4 py-3">{t.adminActions}</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map(p => (
+                {visibleProducts.map(p => (
                   <tr key={p.id} className="border-t border-border">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
