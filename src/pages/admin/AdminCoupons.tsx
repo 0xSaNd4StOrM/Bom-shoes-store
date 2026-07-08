@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { Loader2, Plus, X, Edit2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { CATEGORY_VALUES } from './AdminProducts'
+import { useCategories } from '@/contexts/CategoriesContext'
 
 const EMPTY: Partial<Coupon> = {
   code: '',
@@ -69,6 +69,8 @@ export default function AdminCoupons() {
   const [saving, setSaving] = useState(false)
   const { isAdmin } = useAuth()
   const { formatPrice, currency } = useCurrency()
+  const { categories } = useCategories()
+  const CATEGORY_VALUES = categories.map(c => c.value)
 
   async function load() {
     setLoading(true)

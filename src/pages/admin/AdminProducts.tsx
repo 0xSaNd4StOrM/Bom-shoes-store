@@ -3,7 +3,7 @@ import { supabase, Product, ProductImage, ProductCatalogEntry } from '@/lib/supa
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
-import { CATEGORY_VALUES, categoryLabel } from '@/lib/categories'
+import { useCategories } from '@/contexts/CategoriesContext'
 import { Loader2, Plus, X, Edit2, Trash2, Star, Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -14,8 +14,6 @@ const EMPTY: Partial<Product> = {
   name: '', slug: '', description: '', price: 0, category: 'Sneakers',
   featured: false, sale_price: null, materials: '', weight_grams: null, tags: [],
 }
-
-export { CATEGORY_VALUES }
 
 // Local editable row for the variant list. `_key` is a stable React key that
 // exists even before a row has been saved to the DB (no `id` yet).
@@ -65,6 +63,8 @@ export default function AdminProducts() {
   const { isAdmin } = useAuth()
   const t = useT()
   const { formatPrice, currency } = useCurrency()
+  const { categories, categoryLabel } = useCategories()
+  const CATEGORY_VALUES = categories.map(c => c.value)
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -338,7 +338,7 @@ export default function AdminProducts() {
         >
           <option value="all">{t.adminAllCategories}</option>
           {CATEGORY_VALUES.map(c => (
-            <option key={c} value={c}>{categoryLabel(t, c)}</option>
+            <option key={c} value={c}>{categoryLabel(c)}</option>
           ))}
         </select>
       </div>
@@ -393,7 +393,7 @@ export default function AdminProducts() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{categoryLabel(t, p.category)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{categoryLabel(p.category)}</td>
                     <td className="px-4 py-3">{formatPrice(Number(p.price))}</td>
                     <td className="px-4 py-3">
                       <span className={p.total_stock < 10 ? 'text-red-700' : ''}>{p.total_stock}</span>
@@ -456,7 +456,7 @@ export default function AdminProducts() {
                     className="w-full bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none cursor-pointer"
                   >
                     {CATEGORY_VALUES.map(c => (
-                      <option key={c} value={c}>{categoryLabel(t, c)}</option>
+                      <option key={c} value={c}>{categoryLabel(c)}</option>
                     ))}
                   </select>
                 </div>

@@ -14,7 +14,7 @@ import SectionHeading from '@/components/SectionHeading'
 import CountdownTimer from '@/components/CountdownTimer'
 import QuickViewModal from '@/components/QuickViewModal'
 import { useSeo } from '@/hooks/useSeo'
-import { categoryLabel } from '@/lib/categories'
+import { useCategories } from '@/contexts/CategoriesContext'
 
 // Homepage hero banner slide, sourced from the admin-managed hero_banners
 // table. Rendered instead of the hardcoded hero below when >=1 active banner
@@ -103,6 +103,7 @@ export default function Home() {
   const t = useT()
   const { lang } = useLanguage()
   const { addItem } = useCart()
+  const { categoryLabel } = useCategories()
   const revealRefs = useRef<HTMLElement[]>([])
 
   useSeo({ title: `${t.brandName} · ${t.brandTagline}`, description: t.homeHeroSubtitle })
@@ -381,7 +382,7 @@ export default function Home() {
                   to={`/shop?category=${cat}`}
                   className="px-4 py-2 text-[12px] tracking-[0.1em] uppercase border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors"
                 >
-                  {categoryLabel(t, cat)}
+                  {categoryLabel(cat)}
                 </Link>
               ))}
           <Link
@@ -421,7 +422,7 @@ export default function Home() {
                   <ProductCard
                     key={p.id}
                     product={p}
-                    categoryLabel={categoryLabel(t, p.category)}
+                    categoryLabel={categoryLabel(p.category)}
                     onQuickView={setQuickViewId}
                     onQuickAdd={quickAdd}
                     quickAdding={quickAddingId === p.id}

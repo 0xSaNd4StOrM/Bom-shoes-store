@@ -8,9 +8,8 @@ import { Loader2 } from 'lucide-react'
 import QuickViewModal from '@/components/QuickViewModal'
 import ProductCard from '@/components/ProductCard'
 import { useSeo } from '@/hooks/useSeo'
-import { categoryLabel } from '@/lib/categories'
+import { useCategories } from '@/contexts/CategoriesContext'
 
-const CATEGORY_VALUES = ['All', 'Sneakers', 'Boots', 'Loafers', 'Derbies', 'Slippers', 'Sandals']
 const SORT_VALUES = ['featured', 'price-asc', 'price-desc', 'newest']
 
 export default function Shop() {
@@ -31,6 +30,11 @@ export default function Shop() {
   const t = useT()
   const { lang } = useLanguage()
   const { addItem } = useCart()
+  const { categories, categoryLabel: dbCategoryLabel } = useCategories()
+  const CATEGORY_VALUES = ['All', ...categories.map(c => c.value)]
+  function categoryLabel(c: string): string {
+    return c === 'All' ? t.shopAll : dbCategoryLabel(c)
+  }
 
   function sortLabel(s: string): string {
     switch (s) {
@@ -49,7 +53,7 @@ export default function Shop() {
     title: search
       ? `${t.shopSearchingFor(search)} · ${t.brandName}`
       : category !== 'All'
-      ? `${categoryLabel(t, category)} · ${t.shopTitle} · ${t.brandName}`
+      ? `${categoryLabel(category)} · ${t.shopTitle} · ${t.brandName}`
       : `${t.shopTitle} · ${t.brandName}`,
     description: t.shopSubtitle,
   })
@@ -199,7 +203,7 @@ export default function Shop() {
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {categoryLabel(t, c)}
+                  {categoryLabel(c)}
                 </button>
               ))}
             </div>
@@ -311,7 +315,7 @@ export default function Shop() {
                   <ProductCard
                     key={p.id}
                     product={p}
-                    categoryLabel={categoryLabel(t, p.category)}
+                    categoryLabel={categoryLabel(p.category)}
                     bxgyBadge={bxgyBadge}
                     onQuickView={setQuickViewId}
                     onQuickAdd={quickAdd}

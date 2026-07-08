@@ -250,6 +250,17 @@ export type Testimonial = {
   created_at: string
 }
 
+// Admin-managed product categories. `value` is stored as free text on
+// products.category (no FK -- that column predates this table). Public
+// SELECT; admin-only write. Ordered by `position`.
+export type Category = {
+  value: string
+  label_en: string
+  label_ar: string
+  position: number
+  created_at: string
+}
+
 export type ActivityLog = {
   id: string
   action: string
