@@ -4,6 +4,7 @@ import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage, useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { useCategories } from '@/contexts/CategoriesContext'
 import { ShoppingBag, User, Menu, X, LogOut, LayoutDashboard, Globe, ChevronDown, Search, Instagram, Facebook, Share2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase, ProductCatalogEntry } from '@/lib/supabase'
@@ -46,6 +47,7 @@ export default function Layout() {
   const { user, profile, isAdmin, signOut } = useAuth()
   const t = useT()
   const { lang, setLang } = useLanguage()
+  const { categories } = useCategories()
   const { formatPrice } = useCurrency()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
@@ -588,10 +590,13 @@ export default function Layout() {
             <div className="md:col-span-2">
               <h4 className="text-[11px] tracking-[0.25em] uppercase font-medium mb-6 text-background/90">{t.footerShop}</h4>
               <ul className="space-y-3 text-sm font-light text-background/70">
-                <li><Link to="/shop?category=Sneakers" className="hover:text-background transition-colors">{t.navSneakers}</Link></li>
-                <li><Link to="/shop?category=Boots" className="hover:text-background transition-colors">{t.navBoots}</Link></li>
-                <li><Link to="/shop?category=Loafers" className="hover:text-background transition-colors">{t.navLoafers}</Link></li>
-                <li><Link to="/shop?category=Slippers" className="hover:text-background transition-colors">{t.navSlippers}</Link></li>
+                {categories.map(c => (
+                  <li key={c.value}>
+                    <Link to={`/shop?category=${c.value}`} className="hover:text-background transition-colors">
+                      {lang === 'ar' ? c.label_ar : c.label_en}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="md:col-span-2">
