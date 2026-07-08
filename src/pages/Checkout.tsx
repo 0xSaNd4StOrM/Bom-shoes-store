@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT, useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { supabase } from '@/lib/supabase'
 import type { CreateOrderRequest, CreateOrderResponse } from '@/lib/kashier'
 import { ArrowLeft, CreditCard, Lock } from 'lucide-react'
@@ -16,6 +17,7 @@ export default function Checkout() {
   const navigate = useNavigate()
   const t = useT()
   const { lang } = useLanguage()
+  const { formatPrice } = useCurrency()
 
   useSeo({ title: `${t.checkoutShipping} — ${t.brandName}`, description: t.checkoutPaymentDesc })
 
@@ -203,7 +205,7 @@ export default function Checkout() {
               {submitting ? t.checkoutPreparing : (
                 <>
                   <CreditCard className="w-4 h-4" />
-                  {t.checkoutContinue(grand.toFixed(0))}
+                  {t.checkoutContinue(formatPrice(grand))}
                 </>
               )}
             </button>
@@ -229,20 +231,20 @@ export default function Checkout() {
                       <p className="text-sm font-medium truncate">{item.product.name}</p>
                       <p className="text-xs text-muted-foreground">{item.color}, {item.size}</p>
                     </div>
-                    <p className="text-sm">${(item.product.price * item.quantity).toFixed(0)}</p>
+                    <p className="text-sm">{formatPrice(item.product.price * item.quantity)}</p>
                   </div>
                 ))}
               </div>
               <dl className="space-y-2 text-sm border-t border-border pt-4">
-                <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartSubtotal}</dt><dd>${totalPrice.toFixed(0)}</dd></div>
+                <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartSubtotal}</dt><dd>{formatPrice(totalPrice)}</dd></div>
                 {discountAmount > 0 && (
-                  <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartDiscount}</dt><dd>−${discountAmount.toFixed(0)}</dd></div>
+                  <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartDiscount}</dt><dd>−{formatPrice(discountAmount)}</dd></div>
                 )}
-                <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartShipping}</dt><dd>{shipping === 0 ? t.cartFree : `$${shipping.toFixed(0)}`}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartTax}</dt><dd>${tax.toFixed(0)}</dd></div>
+                <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartShipping}</dt><dd>{shipping === 0 ? t.cartFree : formatPrice(shipping)}</dd></div>
+                <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartTax}</dt><dd>{formatPrice(tax)}</dd></div>
                 <div className="pt-3 border-t border-border flex justify-between items-baseline">
                   <dt>{t.cartTotal}</dt>
-                  <dd className="font-display text-2xl">${grand.toFixed(0)}</dd>
+                  <dd className="font-display text-2xl">{formatPrice(grand)}</dd>
                 </div>
               </dl>
             </div>

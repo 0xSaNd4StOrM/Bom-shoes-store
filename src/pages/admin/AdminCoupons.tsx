@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, Coupon } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { Loader2, Plus, X, Edit2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CATEGORY_VALUES } from './AdminProducts'
@@ -42,9 +43,9 @@ function fromLocalInput(v: string): string | null {
   return v ? new Date(v).toISOString() : null
 }
 
-function discountLabel(c: Coupon): string {
+function discountLabel(c: Coupon, formatPrice: (n: number) => string): string {
   if (c.discount_type === 'percentage') return `${c.discount_value}% off`
-  if (c.discount_type === 'fixed') return `$${c.discount_value} off`
+  if (c.discount_type === 'fixed') return `${formatPrice(c.discount_value)} off`
   if (c.discount_type === 'buy_x_get_y') {
     return `Buy ${c.buy_quantity ?? '?'} Get ${c.get_quantity ?? '?'} ${c.get_discount_percent ?? '?'}% off`
   }
@@ -67,6 +68,7 @@ export default function AdminCoupons() {
   const [editing, setEditing] = useState<Partial<Coupon> | null>(null)
   const [saving, setSaving] = useState(false)
   const { isAdmin } = useAuth()
+  const { formatPrice } = useCurrency()
 
   async function load() {
     setLoading(true)
@@ -203,7 +205,7 @@ export default function AdminCoupons() {
                       <p className="font-mono font-medium">{c.code || 'Auto-apply'}</p>
                       {c.description && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{c.description}</p>}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{discountLabel(c)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{discountLabel(c, formatPrice)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{c.stackable ? 'Yes' : '—'}</td>
                     <td className="px-4 py-3">
                       <input

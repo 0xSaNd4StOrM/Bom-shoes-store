@@ -4,6 +4,7 @@ import { supabase, Product, ProductImage, ProductVariant, ProductCatalogEntry, R
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT, useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
 import { useSeo } from '@/hooks/useSeo'
 import WishlistButton from '@/components/WishlistButton'
@@ -69,6 +70,7 @@ export default function ProductDetail() {
   const navigate = useNavigate()
   const t = useT()
   const { lang } = useLanguage()
+  const { currency, formatPrice } = useCurrency()
 
   useEffect(() => {
     async function load() {
@@ -364,7 +366,7 @@ export default function ProductDetail() {
       offers: {
         '@type': 'Offer',
         price: Number(effectivePrice).toFixed(2),
-        priceCurrency: 'USD',
+        priceCurrency: currency,
         availability: outOfStockForLd ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
       },
     }
@@ -386,7 +388,7 @@ export default function ProductDetail() {
       document.head.appendChild(script)
     }
     script.textContent = JSON.stringify(jsonLd)
-  }, [product, heroImage, effectivePrice, hasVariants, selectedVariant])
+  }, [product, heroImage, effectivePrice, hasVariants, selectedVariant, currency])
 
   // Only strip the tag on unmount (leaving the product page entirely) -- not
   // on every dependency change above, which would just churn the same tag.
@@ -456,7 +458,7 @@ export default function ProductDetail() {
             <p className="text-zen text-muted-foreground mb-3">{product.category}</p>
             <h1 className="font-display text-4xl md:text-5xl mb-3 text-balance">{product.name}</h1>
             <p className="font-display text-2xl text-muted-foreground mb-3">
-              ${Number(effectivePrice).toFixed(0)}
+              {formatPrice(Number(effectivePrice))}
             </p>
 
             <div className="flex items-center gap-2 mb-8">
@@ -589,9 +591,9 @@ export default function ProductDetail() {
                           </div>
                         )}
                         <div className="flex items-center gap-3 mb-4">
-                          <span className="font-display text-xl">${discountedTotal.toFixed(0)}</span>
+                          <span className="font-display text-xl">{formatPrice(discountedTotal)}</span>
                           {discountedTotal < regularTotal && (
-                            <span className="text-sm text-muted-foreground line-through">${regularTotal.toFixed(0)}</span>
+                            <span className="text-sm text-muted-foreground line-through">{formatPrice(regularTotal)}</span>
                           )}
                         </div>
                         <button
@@ -790,13 +792,14 @@ export default function ProductDetail() {
 
 // Same card markup the Related and Recently Viewed grids both use.
 function ProductCard({ product }: { product: ProductCatalogEntry }) {
+  const { formatPrice } = useCurrency()
   return (
     <Link to={`/product/${product.slug}`} className="group block">
       <div className="aspect-square bg-muted overflow-hidden img-zoom">
         <img src={product.image_url || ''} alt={product.name} className="w-full h-full object-cover" />
       </div>
       <h3 className="mt-4 font-display text-lg group-hover:text-muted-foreground transition-colors">{product.name}</h3>
-      <p className="text-sm text-muted-foreground mt-1">${Number(product.min_price).toFixed(0)}</p>
+      <p className="text-sm text-muted-foreground mt-1">{formatPrice(Number(product.min_price))}</p>
     </Link>
   )
 }

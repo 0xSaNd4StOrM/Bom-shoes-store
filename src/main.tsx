@@ -5,6 +5,7 @@ import { Toaster } from 'sonner'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { AuthProvider } from './contexts/AuthContext'
 import { CartProvider } from './contexts/CartContext'
+import { CurrencyProvider } from './contexts/CurrencyContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { WishlistProvider } from './contexts/WishlistContext'
 import App from './App.tsx'
@@ -15,10 +16,11 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <BrowserRouter>
         <LanguageProvider>
-          <AuthProvider>
-            <WishlistProvider>
-              <CartProvider>
-                <App />
+          <CurrencyProvider>
+            <AuthProvider>
+              <WishlistProvider>
+                <CartProvider>
+                  <App />
                 <Toaster
                   position="top-center"
                   toastOptions={{
@@ -29,10 +31,11 @@ createRoot(document.getElementById('root')!).render(
                       fontSize: '0.875rem',
                     },
                   }}
-                />
-              </CartProvider>
-            </WishlistProvider>
-          </AuthProvider>
+                  />
+                </CartProvider>
+              </WishlistProvider>
+            </AuthProvider>
+          </CurrencyProvider>
         </LanguageProvider>
       </BrowserRouter>
     </ErrorBoundary>

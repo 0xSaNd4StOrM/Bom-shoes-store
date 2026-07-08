@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT, useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { supabase } from '@/lib/supabase'
 import { Minus, Plus, X, ArrowRight, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,6 +17,7 @@ export default function Cart() {
   const navigate = useNavigate()
   const t = useT()
   const { lang } = useLanguage()
+  const { formatPrice } = useCurrency()
 
   useSeo({ title: `${t.cart} — ${t.brandName}`, description: t.cartEmptyDesc })
 
@@ -167,7 +169,7 @@ export default function Cart() {
                       </button>
                     </div>
                     <p className="text-sm font-medium">
-                      ${(item.product.price * item.quantity).toFixed(0)}
+                      {formatPrice(item.product.price * item.quantity)}
                     </p>
                   </div>
                 </div>
@@ -237,25 +239,25 @@ export default function Cart() {
               <dl className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">{t.cartSubtotal}</dt>
-                  <dd>${totalPrice.toFixed(0)}</dd>
+                  <dd>{formatPrice(totalPrice)}</dd>
                 </div>
                 {hasDiscount && (
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">{t.cartDiscount}</dt>
-                    <dd>−${discount!.amount.toFixed(0)}</dd>
+                    <dd>−{formatPrice(discount!.amount)}</dd>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">{t.cartShipping}</dt>
-                  <dd>{shipping === 0 ? t.cartFree : `$${shipping.toFixed(0)}`}</dd>
+                  <dd>{shipping === 0 ? t.cartFree : formatPrice(shipping)}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">{t.cartTax}</dt>
-                  <dd>${tax.toFixed(0)}</dd>
+                  <dd>{formatPrice(tax)}</dd>
                 </div>
                 <div className="pt-3 mt-3 border-t border-border flex justify-between items-baseline">
                   <dt>{t.cartTotal}</dt>
-                  <dd className="font-display text-2xl">${grand.toFixed(0)}</dd>
+                  <dd className="font-display text-2xl">{formatPrice(grand)}</dd>
                 </div>
               </dl>
               <button

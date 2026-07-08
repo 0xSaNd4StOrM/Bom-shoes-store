@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage, useT } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { ShoppingBag, User, Menu, X, LogOut, LayoutDashboard, Globe, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase, ProductCatalogEntry } from '@/lib/supabase'
@@ -28,6 +29,7 @@ export default function Layout() {
   const { user, profile, isAdmin, signOut } = useAuth()
   const t = useT()
   const { lang, setLang } = useLanguage()
+  const { formatPrice } = useCurrency()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
@@ -377,7 +379,7 @@ export default function Layout() {
                               <img src={p.image_url || ''} alt={p.name} className="w-full h-full object-cover" />
                             </div>
                             <span className="flex-1 text-sm truncate">{p.name}</span>
-                            <span className="text-sm text-muted-foreground shrink-0">${Number(p.min_price).toFixed(0)}</span>
+                            <span className="text-sm text-muted-foreground shrink-0">{formatPrice(Number(p.min_price))}</span>
                           </button>
                         ))}
                       </div>

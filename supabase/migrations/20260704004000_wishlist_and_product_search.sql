@@ -35,15 +35,36 @@ create policy "Users can delete their own wishlist items"
 -- name/description/category/tags automatically; GIN index makes @@ queries
 -- fast. product_catalog already does `select p.*` from products, so it picks
 -- up this column for free -- no view change needed.
+--
+-- Postgres requires a GENERATED column's expression to be IMMUTABLE, but the
+-- `to_tsvector('english', ...)` config-name form is only STABLE (resolving the
+-- 'english' text config goes through a catalog lookup). We wrap it in an
+-- explicitly IMMUTABLE SQL function with the search config hard-coded: the
+-- document is genuinely deterministic (fixed 'english' config, pure string
+-- concatenation), so labelling it immutable is correct, and it satisfies the
+-- generated-column requirement. This is the standard Supabase/Postgres pattern
+-- for a generated tsvector column.
 -- ---------------------------------------------------------------------------
+create or replace function public.products_search_document(
+  p_name text,
+  p_description text,
+  p_category text,
+  p_tags text[]
+) returns tsvector
+language sql
+immutable
+as $$
+  select to_tsvector('english',
+    coalesce(p_name, '') || ' ' ||
+    coalesce(p_description, '') || ' ' ||
+    coalesce(p_category, '') || ' ' ||
+    array_to_string(coalesce(p_tags, '{}'), ' ')
+  )
+$$;
+
 alter table public.products
   add column search_vector tsvector generated always as (
-    to_tsvector('english',
-      coalesce(name, '') || ' ' ||
-      coalesce(description, '') || ' ' ||
-      coalesce(category, '') || ' ' ||
-      array_to_string(coalesce(tags, '{}'), ' ')
-    )
+    public.products_search_document(name, description, category, tags)
   ) stored;
 
 create index products_search_vector_idx on public.products using gin (search_vector);

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase, Product, ProductImage, ProductCatalogEntry } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { Loader2, Plus, X, Edit2, Trash2, Star } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -55,6 +56,7 @@ export default function AdminProducts() {
   const [costPrice, setCostPrice] = useState<number | null>(null)
   const { isAdmin } = useAuth()
   const t = useT()
+  const { formatPrice } = useCurrency()
 
   async function load() {
     setLoading(true)
@@ -316,7 +318,7 @@ export default function AdminProducts() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{p.category}</td>
-                    <td className="px-4 py-3">${Number(p.price).toFixed(0)}</td>
+                    <td className="px-4 py-3">{formatPrice(Number(p.price))}</td>
                     <td className="px-4 py-3">
                       <span className={p.total_stock < 10 ? 'text-red-700' : ''}>{p.total_stock}</span>
                     </td>

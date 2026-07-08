@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase, Order } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { Loader2, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -23,6 +24,7 @@ export default function AdminOrders() {
   const [filter, setFilter] = useState<string>('all')
   const { isAdmin } = useAuth()
   const t = useT()
+  const { formatPrice } = useCurrency()
 
   async function load() {
     setLoading(true)
@@ -112,7 +114,7 @@ export default function AdminOrders() {
                     <td className="px-4 py-4 text-muted-foreground">
                       {Array.isArray(o.items) ? o.items.length : 0} {(o.items as any[])?.length === 1 ? t.piece : t.pieces}
                     </td>
-                    <td className="px-4 py-4 font-medium">${Number(o.total_amount).toFixed(0)}</td>
+                    <td className="px-4 py-4 font-medium">{formatPrice(Number(o.total_amount))}</td>
                     <td className="px-4 py-4">
                       <span className={`text-xs px-2 py-0.5 border ${
                         o.payment_status === 'paid'

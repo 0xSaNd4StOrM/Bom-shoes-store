@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ProductCatalogEntry } from '@/lib/supabase'
 import { useT } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import WishlistButton from '@/components/WishlistButton'
 import RatingStars from '@/components/RatingStars'
 import { cn } from '@/lib/utils'
@@ -34,6 +35,7 @@ export default function ProductCard({
   className = '',
 }: ProductCardProps) {
   const t = useT()
+  const { formatPrice } = useCurrency()
   const isNew = Date.now() - new Date(p.created_at).getTime() < NEW_WINDOW_MS
 
   return (
@@ -112,7 +114,7 @@ export default function ProductCard({
           {p.name}
         </h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          ${Number(p.min_price).toFixed(0)}
+          {formatPrice(Number(p.min_price))}
         </p>
         <RatingStars rating={p.avg_rating} count={p.review_count} className="mt-1.5" />
       </div>

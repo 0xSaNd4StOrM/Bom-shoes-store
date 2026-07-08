@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, Bundle } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { Loader2, Plus, X, Edit2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -28,8 +29,8 @@ function blankItemRow(): ItemRow {
   return { product_id: '', quantity: 1, _key: crypto.randomUUID() }
 }
 
-function discountLabel(b: Bundle): string {
-  return b.discount_type === 'percentage' ? `${b.discount_value}% off` : `$${b.discount_value} off`
+function discountLabel(b: Bundle, formatPrice: (n: number) => string): string {
+  return b.discount_type === 'percentage' ? `${b.discount_value}% off` : `${formatPrice(b.discount_value)} off`
 }
 
 export default function AdminBundles() {
@@ -41,6 +42,7 @@ export default function AdminBundles() {
   const [itemRows, setItemRows] = useState<ItemRow[]>([])
   const [saving, setSaving] = useState(false)
   const { isAdmin } = useAuth()
+  const { formatPrice } = useCurrency()
 
   async function load() {
     setLoading(true)
@@ -192,7 +194,7 @@ export default function AdminBundles() {
                       <p className="font-medium">{b.name}</p>
                       {b.description && <p className="text-xs text-muted-foreground truncate max-w-[240px]">{b.description}</p>}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{discountLabel(b)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{discountLabel(b, formatPrice)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{itemCounts[b.id] || 0}</td>
                     <td className="px-4 py-3">
                       <input

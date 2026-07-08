@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, Order, ProductCatalogEntry } from '@/lib/supabase'
 import { useT, useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { Package, ShoppingBag, TrendingUp, ListOrdered, Loader2 } from 'lucide-react'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -73,6 +74,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const t = useT()
   const { lang } = useLanguage()
+  const { formatPrice } = useCurrency()
 
   useEffect(() => {
     async function load() {
@@ -116,7 +118,7 @@ export default function AdminDashboard() {
         <StatCard
           icon={TrendingUp}
           label={t.adminRevenue}
-          value={`$${stats.revenue.toFixed(0)}`}
+          value={formatPrice(stats.revenue)}
         />
         <StatCard
           icon={ListOrdered}
@@ -159,12 +161,12 @@ export default function AdminDashboard() {
                     axisLine={false}
                     width={44}
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    tickFormatter={(v) => `$${v}`}
+                    tickFormatter={(v) => formatPrice(Number(v))}
                   />
                   <Tooltip
                     contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 0, fontSize: 12 }}
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    formatter={(v: number) => [`$${v.toFixed(0)}`, t.adminRevenue]}
+                    formatter={(v: number) => [formatPrice(v), t.adminRevenue]}
                   />
                   <Line
                     type="monotone"
@@ -241,7 +243,7 @@ export default function AdminDashboard() {
                     <p className="truncate">{o.customer_name || (lang === 'ar' ? 'زائر' : 'Guest')}</p>
                   </div>
                   <div className="text-end flex-shrink-0 ms-4">
-                    <p className="font-medium">${Number(o.total_amount).toFixed(0)}</p>
+                    <p className="font-medium">{formatPrice(Number(o.total_amount))}</p>
                     <p className="text-xs text-muted-foreground">{statusLabel(o.status)}</p>
                   </div>
                 </div>
@@ -268,7 +270,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="truncate">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">${Number(p.price).toFixed(0)}</p>
+                    <p className="text-xs text-muted-foreground">{formatPrice(Number(p.price))}</p>
                   </div>
                   <p className={`text-sm font-medium ${p.total_stock < 10 ? 'text-red-700' : 'text-foreground'}`}>
                     {t.shopOnlyLeft(p.total_stock)}

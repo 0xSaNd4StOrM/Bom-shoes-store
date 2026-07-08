@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { supabase, ProductImage, ProductVariant, ProductCatalogEntry } from '@/lib/supabase'
 import { useCart } from '@/contexts/CartContext'
 import { useT } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import RatingStars from '@/components/RatingStars'
 
 type QuickViewModalProps = {
@@ -22,6 +23,7 @@ export default function QuickViewModal({ productId, onClose }: QuickViewModalPro
   const [color, setColor] = useState('')
   const { addItem } = useCart()
   const t = useT()
+  const { formatPrice } = useCurrency()
 
   useEffect(() => {
     if (!productId) return
@@ -124,7 +126,7 @@ export default function QuickViewModal({ productId, onClose }: QuickViewModalPro
                 </h2>
                 <div className="mb-6">
                   <p className="font-display text-xl text-muted-foreground mb-1.5">
-                    ${Number(effectivePrice).toFixed(0)}
+                    {formatPrice(Number(effectivePrice))}
                   </p>
                   <RatingStars rating={product.avg_rating} count={product.review_count} />
                 </div>

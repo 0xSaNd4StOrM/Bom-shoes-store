@@ -269,7 +269,7 @@ export const translations = {
     checkoutPaymentDesc: 'You will be redirected to Kashier to complete your payment securely. We accept all major cards, mobile wallets, and bank transfers.',
     checkoutKashierTitle: 'Secure Kashier checkout',
     checkoutKashierDesc: 'Your card details are processed by Kashier, our PCI-DSS compliant payment partner. BOM Store never sees or stores your card information.',
-    checkoutContinue: (amount: string) => `Continue to Kashier, $${amount}`,
+    checkoutContinue: (amount: string) => `Continue to Kashier, ${amount}`,
     checkoutPreparing: 'Preparing your order…',
     checkoutTerms: 'By placing this order you agree to our terms of service and quiet returns policy.',
     checkoutYourOrder: 'Your order',
@@ -393,7 +393,7 @@ export const translations = {
     adminStatus: 'Status',
     adminNoOrdersFilter: 'No orders in this state',
     adminUpdated: 'Order updated',
-    adminNewOrderToast: (ref: string, name: string, total: string) => `New order ${ref} from ${name} — $${total}`,
+    adminNewOrderToast: (ref: string, name: string, total: string) => `New order ${ref} from ${name} — ${total}`,
 
     // Status labels
     statusPending: 'pending',
@@ -686,7 +686,7 @@ export const translations = {
     checkoutPaymentDesc: 'سيتم تحويلك إلى كاشير لإكمال الدفع بأمان. نقبل كافة البطاقات الرئيسية، المحافظ الإليكترونية، و التحويلات المصرفية.',
     checkoutKashierTitle: 'دفع آمن عبر كاشير',
     checkoutKashierDesc: 'تتم معالجة بيانات بطاقتك عبر كاشير، شريكنا المتوافق مع معاییر PCI-DSS. BOM Store لا ترى ولا تحفظ بيانات بطاقتك.',
-    checkoutContinue: (amount: string) => `متابعة إلى كاشير، ${amount} د.إ`,
+    checkoutContinue: (amount: string) => `متابعة إلى كاشير، ${amount}`,
     checkoutPreparing: 'جار تجهيز طلبك…',
     checkoutTerms: 'بوضع هذا الطلب فأنت توافق على شروط الخدمة و سياسة الإرجاع الهادئة.',
     checkoutYourOrder: 'طلبك',
@@ -810,7 +810,7 @@ export const translations = {
     adminStatus: 'الحالة',
     adminNoOrdersFilter: 'لا طلبات في هذه الحالة',
     adminUpdated: 'تم تحديث الطلب',
-    adminNewOrderToast: (ref: string, name: string, total: string) => `طلب جديد ${ref} من ${name} — ${total}$`,
+    adminNewOrderToast: (ref: string, name: string, total: string) => `طلب جديد ${ref} من ${name} — ${total}`,
 
     // Status labels
     statusPending: 'بالانتظار',

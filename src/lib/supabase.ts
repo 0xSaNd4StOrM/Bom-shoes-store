@@ -193,6 +193,8 @@ export type StoreSettings = {
   id: string
   logo_url: string | null
   favicon_url: string | null
+  // Display currency only -- Kashier always settles in EGP (see create-order).
+  currency: string
   updated_at: string
 }
 

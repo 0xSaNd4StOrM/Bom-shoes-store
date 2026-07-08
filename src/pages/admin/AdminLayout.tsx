@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { useSeo } from '@/hooks/useSeo'
 import { supabase, Order } from '@/lib/supabase'
 import { Package, LayoutDashboard, ListOrdered, Tag, LogOut, Image, Users, History, Settings, Gift } from 'lucide-react'
@@ -14,6 +15,7 @@ import { Package, LayoutDashboard, ListOrdered, Tag, LogOut, Image, Users, Histo
 export default function AdminLayout() {
   const { profile, signOut } = useAuth()
   const t = useT()
+  const { formatPrice } = useCurrency()
   const location = useLocation()
   const [unreadOrders, setUnreadOrders] = useState(0)
   // Read inside the realtime callback below so an INSERT while already on
@@ -52,7 +54,7 @@ export default function AdminLayout() {
             t.adminNewOrderToast(
               o.kashier_order_id || o.id.slice(0, 8),
               o.customer_name || o.customer_email || t.dash,
-              Number(o.total_amount || 0).toFixed(0)
+              formatPrice(Number(o.total_amount || 0))
             )
           )
         }

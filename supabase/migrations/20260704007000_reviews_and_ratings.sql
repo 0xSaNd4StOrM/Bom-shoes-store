@@ -92,15 +92,24 @@ create trigger set_review_verified_purchase
   for each row execute function public.set_review_verified_purchase();
 
 -- ---------------------------------------------------------------------------
--- product_catalog view: add rating aggregates. CREATE OR REPLACE with every
--- existing column/join from 20260704002000_product_images_and_variants.sql
--- preserved verbatim -- only the new LEFT JOIN and its two columns are added.
--- avg_rating is left NULL (not coalesced to 0) for a product with no reviews
--- yet, so the storefront can render "no ratings yet" instead of a misleading
--- 0-star average; review_count coalesces to 0 since a count has no such
--- ambiguity.
+-- product_catalog view: add rating aggregates. Every existing column/join from
+-- 20260704002000_product_images_and_variants.sql is preserved -- only the new
+-- LEFT JOIN and its two columns are added. avg_rating is left NULL (not
+-- coalesced to 0) for a product with no reviews yet, so the storefront can
+-- render "no ratings yet" instead of a misleading 0-star average; review_count
+-- coalesces to 0 since a count has no such ambiguity.
+--
+-- DROP + CREATE (not CREATE OR REPLACE): between 20260704002000 (which created
+-- this view) and now, 20260704004000 added a `search_vector` column to
+-- products. `select p.*` therefore expands to a different column SET/ORDER than
+-- the existing view has, and CREATE OR REPLACE VIEW rejects any change to the
+-- leading columns' names/order. Dropping first sidesteps that entirely. No
+-- other object depends on this view (RLS policies don't; edge functions query
+-- it only at runtime), so a plain DROP is safe.
 -- ---------------------------------------------------------------------------
-create or replace view public.product_catalog
+drop view if exists public.product_catalog;
+
+create view public.product_catalog
 with (security_invoker = true) as
 select
   p.*,

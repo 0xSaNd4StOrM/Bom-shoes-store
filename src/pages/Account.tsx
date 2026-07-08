@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT, useLanguage } from '@/contexts/LanguageContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { useWishlist } from '@/contexts/WishlistContext'
 import { useSeo } from '@/hooks/useSeo'
 import { supabase, Order, ProductCatalogEntry } from '@/lib/supabase'
@@ -27,6 +28,7 @@ export default function Account() {
   const [loading, setLoading] = useState(true)
   const t = useT()
   const { lang } = useLanguage()
+  const { formatPrice } = useCurrency()
 
   useSeo({
     title: 'My Account — BOM Store',
@@ -78,7 +80,7 @@ export default function Account() {
         <div className="grid md:grid-cols-3 gap-4 mb-16">
           <Stat label={t.accountTotalOrders} value={orders.length} />
           <Stat label={t.accountActiveOrders} value={orders.filter(o => !['delivered', 'cancelled'].includes(o.status)).length} />
-          <Stat label={t.accountTotalSpent} value={`$${orders.reduce((sum, o) => sum + (o.total_amount || 0), 0).toFixed(0)}`} />
+          <Stat label={t.accountTotalSpent} value={formatPrice(orders.reduce((sum, o) => sum + (o.total_amount || 0), 0))} />
         </div>
 
         <div>
@@ -109,7 +111,7 @@ export default function Account() {
                     <div className="flex flex-wrap items-center gap-3">
                       <StatusBadge status={o.status} t={t} />
                       <StatusBadge status={o.payment_status} t={t} />
-                      <p className="font-display text-xl">${Number(o.total_amount).toFixed(0)}</p>
+                      <p className="font-display text-xl">{formatPrice(Number(o.total_amount))}</p>
                     </div>
                   </div>
                   {o.items && Array.isArray(o.items) && o.items.length > 0 && (
@@ -156,7 +158,7 @@ export default function Account() {
                     >
                       {p.name}
                     </Link>
-                    <p className="text-sm text-muted-foreground mt-1">${Number(p.min_price).toFixed(0)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{formatPrice(Number(p.min_price))}</p>
                   </div>
                   <WishlistButton productId={p.id} className="shrink-0" />
                 </div>
