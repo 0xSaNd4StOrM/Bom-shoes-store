@@ -83,6 +83,10 @@ const TRUST_ICONS: Record<string, typeof Truck> = {
   Truck, ShieldCheck, RotateCcw, Lock, Package, Award, Heart, Star, CreditCard, Clock, Gift, Sparkles,
 }
 
+// Static for now -- mirrors the list in Brands.tsx. Swap both for a live
+// `useBrands()` fetch once the admin-managed `brands` table is migrated in.
+const BRANDS = ['Prada', 'Nike', 'Balenciaga', 'Adidas', 'Amiri', 'New Balance', 'Gucci']
+
 export default function Home() {
   const [featured, setFeatured] = useState<ProductCatalogEntry[]>([])
   const [recent, setRecent] = useState<ProductCatalogEntry[]>([])
@@ -256,14 +260,12 @@ export default function Home() {
   const curatedC = content.curated
   const dropC = content.limited_drop
   const trustC = content.trust_badges
-  const atelierC = content.atelier
   // Explicit false hides a section; absent/undefined defaults to shown.
   const heroEnabled = heroC?.enabled !== false
   const showcaseEnabled = content.showcase?.enabled !== false
   const curatedEnabled = curatedC?.enabled !== false
   const dropEnabled = dropC?.enabled !== false
   const trustEnabled = trustC?.enabled !== false
-  const atelierEnabled = atelierC?.enabled !== false
   const categoriesStripEnabled = content.categories_strip?.enabled !== false
   const trustItems = trustC?.items?.length ? trustC.items : [
     { icon: 'Truck', title_en: t.homeTrust1Title, title_ar: t.homeTrust1Title, desc_en: t.homeTrust1Desc, desc_ar: t.homeTrust1Desc },
@@ -514,55 +516,32 @@ export default function Home() {
       </section>
       )}
 
-      {/* ===== ATELIER EDITORIAL (kept -- distinct brand story, not covered
-          by any of the new sections above) ===== */}
-      {atelierEnabled && (
-      <section className="py-24 md:py-32 px-6 lg:px-10 bg-foreground text-background overflow-hidden">
-        <div className="max-w-[1400px] mx-auto grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          <div className="relative aspect-[4/5] overflow-hidden reveal" ref={addRevealRef}>
-            {(atelierC?.image_url || recent[5]?.image_url) && (
-              <img
-                src={atelierC?.image_url || recent[5]?.image_url || ''}
-                alt={recent[5]?.name ?? ''}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            )}
-            {/* Floating tag */}
-            <div className="absolute top-6 start-6 bg-background text-foreground px-4 py-2 text-[10px] tracking-[0.3em] uppercase font-medium">
-              {(lang === 'ar' ? atelierC?.tag_ar : atelierC?.tag_en) ?? 'The Workshop · 1986'}
-            </div>
-          </div>
-          <div className="reveal" ref={addRevealRef}>
-            <p className="text-[11px] tracking-[0.3em] uppercase text-background/60 mb-6">{(lang === 'ar' ? atelierC?.eyebrow_ar : atelierC?.eyebrow_en) ?? t.homeAtelierEyebrowNew}</p>
-            <h2 className="font-display text-5xl md:text-6xl lg:text-7xl leading-[0.95] mb-8 text-balance">
-              {(lang === 'ar' ? atelierC?.title_ar : atelierC?.title_en) ?? t.homeAtelierTitleNew}
-            </h2>
-            <p className="text-background/70 font-light leading-relaxed max-w-lg mb-10 text-lg">
-              {(lang === 'ar' ? atelierC?.subtitle_ar : atelierC?.subtitle_en) ?? t.homeAtelierSubtitle}
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6 mb-10">
-              {(atelierC?.stats?.length ? atelierC.stats : [
-                { value: 40, label_en: 'years of craft', label_ar: 'years of craft' },
-                { value: 16, label_en: 'pairs of hands', label_ar: 'pairs of hands' },
-                { value: 3, label_en: 'days per pair', label_ar: 'days per pair' },
-              ]).map((stat: any, i: number) => (
-                <div key={i}>
-                  <p className="font-display text-4xl md:text-5xl">{stat.value}</p>
-                  <p className="text-[10px] tracking-[0.3em] uppercase text-background/60 mt-1">{lang === 'ar' ? stat.label_ar : stat.label_en}</p>
-                </div>
-              ))}
-            </div>
+      {/* ===== SHOP BY BRAND ===== */}
+      <section className="py-16 px-6 lg:px-10 bg-cream border-y border-border/60">
+        <div className="max-w-[1400px] mx-auto">
+          <p className="text-center text-[11px] tracking-[0.3em] uppercase text-gold-on-light mb-10">
+            {t.brandsEyebrow}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
+            {BRANDS.map(brand => (
+              <Link
+                key={brand}
+                to={`/shop?brand=${encodeURIComponent(brand)}`}
+                className="font-display text-xl md:text-2xl tracking-wide text-foreground/70 hover:text-foreground transition-colors"
+              >
+                {brand}
+              </Link>
+            ))}
             <Link
-              to={atelierC?.cta_link ?? '/shop'}
-              className="group inline-flex items-center gap-3 bg-background text-foreground px-8 py-4 text-[13px] tracking-[0.2em] uppercase font-medium hover:bg-background/90 transition-all duration-300 cursor-pointer hover:shadow-2xl"
+              to="/brands"
+              className="inline-flex items-center gap-2 bg-foreground text-background px-5 py-2.5 text-[11px] tracking-[0.2em] uppercase font-medium hover:bg-foreground/85 transition-colors"
             >
-              {(lang === 'ar' ? atelierC?.cta_text_ar : atelierC?.cta_text_en) ?? t.homeAtelierCta}
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform flip-rtl" />
+              {t.shopViewAll}
+              <ArrowRight className="w-3.5 h-3.5 flip-rtl" />
             </Link>
           </div>
         </div>
       </section>
-      )}
 
       {/* ===== TESTIMONIALS (kept -- social proof, restyled to cream) ===== */}
       {testimonials === null && (

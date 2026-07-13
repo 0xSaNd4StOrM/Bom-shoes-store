@@ -18,6 +18,7 @@ export const translations = {
     navSlippers: 'Slippers',
     navDerbies: 'Derbies',
     navSandals: 'Sandals',
+    navBrands: 'Brands',
 
     // Account menu
     myAccount: 'My account',
@@ -138,6 +139,10 @@ export const translations = {
     homeTrust4Title: 'Secure payments',
     homeTrust4Desc: 'Every order processed securely through Kashier.',
 
+    // Brands
+    brandsEyebrow: 'Shop by Brand',
+    brandsSubtitle: 'The names behind every pair, curated for you.',
+
     // Shop
     shopEyebrow: 'The Collection',
     shopTitle: 'Shop all',
@@ -235,6 +240,7 @@ export const translations = {
     wishlistRemove: 'Remove from wishlist',
     wishlistSignIn: 'Sign in to save favorites',
     wishlistError: 'Could not update your wishlist',
+    wishlistNavLabel: 'Wishlist',
 
     // Quick view
     quickViewDetails: 'View full details',
@@ -597,6 +603,7 @@ export const translations = {
     navSlippers: 'نعال',
     navDerbies: 'دربي',
     navSandals: 'صنادل',
+    navBrands: 'الماركات',
 
     // Account menu
     myAccount: 'حسابي',
@@ -717,6 +724,10 @@ export const translations = {
     homeTrust4Title: 'دفع آمن',
     homeTrust4Desc: 'كل طلب يعالج بأمان عبر كاشير.',
 
+    // Brands
+    brandsEyebrow: 'تسوق حسب الماركة',
+    brandsSubtitle: 'الأسماء وراء كل زوج، مختارة لك.',
+
     // Shop
     shopEyebrow: 'المجموعة',
     shopTitle: 'كل القطع',
@@ -813,6 +824,7 @@ export const translations = {
     wishlistRemove: 'إزالة من المفضلة',
     wishlistSignIn: 'سجل الدخول لحفظ المفضلة',
     wishlistError: 'تعذر تحديث قائمة المفضلة',
+    wishlistNavLabel: 'المفضلة',
 
     // Quick view
     quickViewDetails: 'عرض التفاصيل الكاملة',

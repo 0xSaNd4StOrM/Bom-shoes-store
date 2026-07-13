@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 // Every one of these keys is pre-seeded by migration (see task context) --
 // plain UPDATE is always correct here, there's no insert-then-conflict case.
 const SITE_CONTENT_KEYS = [
-  'hero', 'showcase', 'curated', 'limited_drop', 'trust_badges', 'atelier',
+  'hero', 'showcase', 'curated', 'limited_drop', 'trust_badges',
   'newsletter', 'categories_strip', 'announcement', 'footer_links',
 ] as const
 type SiteContentKey = typeof SITE_CONTENT_KEYS[number]
@@ -23,7 +23,6 @@ const TABS = [
   { key: 'curated', label: 'Curated' },
   { key: 'limited_drop', label: 'Limited Drop' },
   { key: 'trust_badges', label: 'Trust Badges' },
-  { key: 'atelier', label: 'Atelier' },
   { key: 'newsletter', label: 'Newsletter' },
   { key: 'categories_strip', label: 'Categories Strip' },
   { key: 'announcement', label: 'Announcement Bar' },
@@ -111,7 +110,6 @@ export default function AdminHomepage() {
           readOnly={!isAdmin}
         />
       )}
-      {tab === 'atelier' && <AtelierTab value={drafts.atelier || {}} setField={(f, v) => setField('atelier', f, v)} onSave={() => saveKey('atelier')} readOnly={!isAdmin} />}
       {tab === 'newsletter' && <NewsletterTab value={drafts.newsletter || {}} setField={(f, v) => setField('newsletter', f, v)} onSave={() => saveKey('newsletter')} readOnly={!isAdmin} />}
       {tab === 'categories_strip' && <CategoriesStripTab value={drafts.categories_strip || {}} setField={(f, v) => setField('categories_strip', f, v)} onSave={() => saveKey('categories_strip')} readOnly={!isAdmin} />}
       {tab === 'announcement' && <AnnouncementTab value={drafts.announcement || { lines: [] }} setField={(f, v) => setField('announcement', f, v)} onSave={() => saveKey('announcement')} readOnly={!isAdmin} />}
@@ -401,63 +399,6 @@ function TrustBadgesTab({ value, setField, onSave, readOnly }: { value: any; set
         </div>
       </div>
 
-      <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
-      <SaveBar onSave={onSave} readOnly={readOnly} />
-    </Card>
-  )
-}
-
-// ---------- Atelier ----------
-
-function AtelierTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
-  const stats: any[] = value.stats || []
-
-  function updateStat(idx: number, field: string, v: any) {
-    setField('stats', stats.map((s, i) => (i === idx ? { ...s, [field]: v } : s)))
-  }
-  function addStat() {
-    setField('stats', [...stats, { value: '', label_en: '', label_ar: '' }])
-  }
-  function removeStat(idx: number) {
-    setField('stats', stats.filter((_, i) => i !== idx))
-  }
-
-  return (
-    <Card>
-      <BilingualField label="Eyebrow" valueEn={value.eyebrow_en || ''} valueAr={value.eyebrow_ar || ''} onEnChange={v => setField('eyebrow_en', v)} onArChange={v => setField('eyebrow_ar', v)} disabled={readOnly} />
-      <BilingualField label="Title" valueEn={value.title_en || ''} valueAr={value.title_ar || ''} onEnChange={v => setField('title_en', v)} onArChange={v => setField('title_ar', v)} disabled={readOnly} />
-      <BilingualField label="Subtitle" valueEn={value.subtitle_en || ''} valueAr={value.subtitle_ar || ''} onEnChange={v => setField('subtitle_en', v)} onArChange={v => setField('subtitle_ar', v)} textarea disabled={readOnly} />
-      <BilingualField label="Tag" valueEn={value.tag_en || ''} valueAr={value.tag_ar || ''} onEnChange={v => setField('tag_en', v)} onArChange={v => setField('tag_ar', v)} disabled={readOnly} />
-
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <span className="block text-xs tracking-widest uppercase text-muted-foreground">Stats</span>
-          {!readOnly && (
-            <button type="button" onClick={addStat} className="text-xs underline cursor-pointer">+ Add stat</button>
-          )}
-        </div>
-        <div className="space-y-3">
-          {stats.map((s, idx) => (
-            <div key={idx} className="border border-border p-3 space-y-3">
-              <div className="grid grid-cols-3 gap-3">
-                <Field label="Value" value={s.value || ''} onChange={v => updateStat(idx, 'value', v)} disabled={readOnly} />
-                <Field label="Label (EN)" value={s.label_en || ''} onChange={v => updateStat(idx, 'label_en', v)} disabled={readOnly} />
-                <Field label="Label (AR)" value={s.label_ar || ''} onChange={v => updateStat(idx, 'label_ar', v)} disabled={readOnly} />
-              </div>
-              <div className="flex justify-end">
-                <button type="button" onClick={() => removeStat(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Remove stat">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-          {stats.length === 0 && <p className="text-sm text-muted-foreground">No stats yet</p>}
-        </div>
-      </div>
-
-      <BilingualField label="CTA text" valueEn={value.cta_text_en || ''} valueAr={value.cta_text_ar || ''} onEnChange={v => setField('cta_text_en', v)} onArChange={v => setField('cta_text_ar', v)} disabled={readOnly} />
-      <Field label="CTA link" value={value.cta_link || ''} onChange={v => setField('cta_link', v)} placeholder="/shop" disabled={readOnly} />
-      <Field label="Image URL" value={value.image_url || ''} onChange={v => setField('image_url', v)} placeholder="https://… (blank for automatic fallback)" disabled={readOnly} />
       <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>

@@ -44,11 +44,18 @@ export default function CountdownTimer({ target, labels = DEFAULT_LABELS, classN
   ]
 
   return (
-    <div className={`flex items-start gap-6 ${className}`}>
-      {units.map(([value, label]) => (
-        <div key={label} className="text-center">
-          <p className="font-display text-4xl md:text-5xl tabular-nums">{String(value).padStart(2, '0')}</p>
-          <p className="text-[10px] tracking-[0.3em] uppercase opacity-60 mt-1">{label}</p>
+    <div className={`flex items-start gap-3 md:gap-5 ${className}`}>
+      {units.map(([value, label], i) => (
+        // display:contents -- the injected prop from this project's dev tooling
+        // (vite-plugin-source-identifier) can't land on a Fragment, so this div
+        // stands in for one; contents removes it from the box model entirely so
+        // the colon and digit-group still participate directly in the flex row.
+        <div key={label} className="contents">
+          {i > 0 && <p className="font-display text-4xl md:text-5xl opacity-30 -mt-1">:</p>}
+          <div className="text-center">
+            <p className="font-display text-4xl md:text-5xl tabular-nums">{String(value).padStart(2, '0')}</p>
+            <p className="text-[10px] tracking-[0.3em] uppercase opacity-60 mt-1">{label}</p>
+          </div>
         </div>
       ))}
     </div>

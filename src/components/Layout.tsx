@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage, useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useCategories } from '@/contexts/CategoriesContext'
-import { ShoppingBag, User, Menu, X, LogOut, LayoutDashboard, Globe, ChevronDown, Search, Instagram, Facebook, Share2 } from 'lucide-react'
+import { useWishlist } from '@/contexts/WishlistContext'
+import { ShoppingBag, User, Menu, X, LogOut, LayoutDashboard, Globe, ChevronDown, Search, Instagram, Facebook, Share2, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase, ProductCatalogEntry } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -48,6 +49,7 @@ export default function Layout() {
   const t = useT()
   const { lang, setLang } = useLanguage()
   const { categories } = useCategories()
+  const { wishlistedIds } = useWishlist()
   const { formatPrice } = useCurrency()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
@@ -218,11 +220,12 @@ export default function Layout() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Kept deliberately short (Shop + Brands) rather than listing every
+  // category here too -- Shop already has its own category filter chips,
+  // so duplicating all six categories in the header would just crowd it.
   const nav = [
     { to: '/shop', label: t.navShop },
-    { to: '/shop?category=Sneakers', label: t.navSneakers },
-    { to: '/shop?category=Boots', label: t.navBoots },
-    { to: '/shop?category=Loafers', label: t.navLoafers },
+    { to: '/brands', label: t.navBrands },
   ]
 
   async function handleSignOut() {
@@ -265,7 +268,7 @@ export default function Layout() {
             : 'bg-background border-transparent'
         )}
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 h-20 flex items-center justify-between gap-4">
+        <div className="relative max-w-[1400px] mx-auto px-6 lg:px-10 h-20 flex items-center justify-between gap-4">
           {/* Mobile menu */}
           <button
             onClick={() => setMobileOpen(true)}
@@ -275,8 +278,19 @@ export default function Layout() {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Left nav (desktop) */}
-          <nav className="hidden lg:flex items-center gap-10 flex-1">
+          {/* Logo - start */}
+          <Link
+            to="/"
+            className="flex-shrink-0 transition-transform duration-500 hover:scale-105"
+            aria-label="BOM Store home"
+          >
+            <Logo size={56} showText={false} />
+          </Link>
+
+          {/* Centered nav (desktop) -- absolutely positioned at the bar's exact
+              midpoint so it stays centered regardless of how wide the logo vs.
+              icon group are, instead of splitting remaining space in half. */}
+          <nav className="hidden lg:flex items-center gap-10 absolute start-1/2 -translate-x-1/2">
             {nav.map(n => (
               <NavLink
                 key={n.to}
@@ -291,15 +305,6 @@ export default function Layout() {
               </NavLink>
             ))}
           </nav>
-
-          {/* Logo - centered */}
-          <Link
-            to="/"
-            className="flex-shrink-0 transition-transform duration-500 hover:scale-105"
-            aria-label="BOM Store home"
-          >
-            <Logo size={56} showText={false} />
-          </Link>
 
           {/* Right icons */}
           <div className="flex items-center gap-0 md:gap-1 flex-1 justify-end">
@@ -410,6 +415,18 @@ export default function Layout() {
                 </div>
               )}
             </div>
+            <Link
+              to={user ? '/account#wishlist' : '/login'}
+              className="hidden md:flex p-2 hover:text-foreground/60 transition-colors relative"
+              aria-label={t.wishlistNavLabel}
+            >
+              <Heart className="w-5 h-5" />
+              {wishlistedIds.size > 0 && (
+                <span className="absolute -top-0.5 -end-0.5 bg-foreground text-background text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
+                  {wishlistedIds.size}
+                </span>
+              )}
+            </Link>
             <Link
               to="/cart"
               className="p-2 hover:text-foreground/60 transition-colors relative"
@@ -526,6 +543,14 @@ export default function Layout() {
             >
               <span>{t.cart}</span>
               {totalItems > 0 && <span className="text-base text-muted-foreground">({totalItems})</span>}
+            </Link>
+            <Link
+              to={user ? '/account#wishlist' : '/login'}
+              onClick={() => setMobileOpen(false)}
+              className="py-4 text-2xl font-display border-b border-border/40 flex items-center justify-between"
+            >
+              <span>{t.wishlistNavLabel}</span>
+              {wishlistedIds.size > 0 && <span className="text-base text-muted-foreground">({wishlistedIds.size})</span>}
             </Link>
             {user ? (
               <Link

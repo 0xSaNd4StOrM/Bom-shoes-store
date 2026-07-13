@@ -134,7 +134,7 @@ export default function Account() {
           )}
         </div>
 
-        <div className="mt-16">
+        <div id="wishlist" className="mt-16 scroll-mt-24">
           <h2 className="font-display text-2xl mb-6">{t.accountWishlist}</h2>
           {wishlistItems.length === 0 ? (
             <div className="border border-border p-12 text-center">

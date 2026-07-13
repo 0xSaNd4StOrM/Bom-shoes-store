@@ -5,6 +5,7 @@ import { useCurrency } from '@/contexts/CurrencyContext'
 import WishlistButton from '@/components/WishlistButton'
 import RatingStars from '@/components/RatingStars'
 import { cn } from '@/lib/utils'
+import { Plus, Loader2 } from 'lucide-react'
 
 const NEW_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
 
@@ -61,7 +62,7 @@ export default function ProductCard({
               </span>
             )}
             {isNew && (
-              <span className="bg-gold text-foreground px-2.5 py-1 text-[10px] tracking-widest uppercase">
+              <span className="bg-background/90 backdrop-blur-sm px-2.5 py-1 text-[10px] tracking-widest uppercase text-gold-on-light">
                 {t.shopNew}
               </span>
             )}
@@ -79,25 +80,18 @@ export default function ProductCard({
           </div>
         )}
 
-        {/* Hover actions -- centered so they never collide with the corner badges above.
+        {/* Quick view -- centered so it never collides with the corner badges above.
             pointer-events-none until hovered, otherwise this full-cover div would eat
-            every click on the card (including the Link navigation) even while invisible. */}
-        <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300 bg-black/0 group-hover:bg-black/5">
+            every click on the card (including the Link navigation) even while invisible.
+            Quick-add moved to the persistent circular button in the price row below,
+            matching the reference layout instead of a second hover button here. */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300 bg-black/0 group-hover:bg-black/5">
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickView(p.id) }}
             className="bg-background/95 backdrop-blur-sm px-4 py-2 text-[10px] tracking-widest uppercase hover:bg-background transition-colors cursor-pointer"
           >
             {t.shopQuickView}
           </button>
-          {p.total_stock > 0 && (
-            <button
-              onClick={(e) => onQuickAdd(p, e)}
-              disabled={quickAdding}
-              className="bg-foreground text-background px-4 py-2 text-[10px] tracking-widest uppercase hover:bg-foreground/90 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {t.shopQuickAdd}
-            </button>
-          )}
         </div>
 
         {/* Rendered after the hover overlay so it stays on top and clickable at all times,
@@ -113,9 +107,22 @@ export default function ProductCard({
         <h3 className="font-display text-xl group-hover:text-muted-foreground transition-colors">
           {p.name}
         </h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {formatPrice(Number(p.min_price))}
-        </p>
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            {formatPrice(Number(p.min_price))}
+          </p>
+          {p.total_stock > 0 && (
+            <button
+              onClick={(e) => onQuickAdd(p, e)}
+              disabled={quickAdding}
+              aria-label={t.shopQuickAdd}
+              title={t.shopQuickAdd}
+              className="shrink-0 w-8 h-8 rounded-full border border-foreground/30 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {quickAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            </button>
+          )}
+        </div>
         <RatingStars rating={p.avg_rating} count={p.review_count} className="mt-1.5" />
       </div>
     </Link>

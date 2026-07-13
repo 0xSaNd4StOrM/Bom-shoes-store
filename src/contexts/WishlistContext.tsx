@@ -7,6 +7,7 @@ import { useT } from '@/contexts/LanguageContext'
 type WishlistContextType = {
   isWishlisted: (productId: string) => boolean
   toggleWishlist: (productId: string) => Promise<void>
+  wishlistedIds: Set<string>
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined)
@@ -72,7 +73,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <WishlistContext.Provider value={{ isWishlisted, toggleWishlist }}>
+    <WishlistContext.Provider value={{ isWishlisted, toggleWishlist, wishlistedIds: wishlisted }}>
       {children}
     </WishlistContext.Provider>
   )
