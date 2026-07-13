@@ -55,7 +55,7 @@ function HeroBanners({ banners }: { banners: HeroBanner[] }) {
           <div className="mt-12 fade-up fade-up-4">
             <Link
               to={banner.cta_link}
-              className="group inline-flex items-center gap-3 bg-background text-foreground px-8 py-4 text-[13px] tracking-[0.2em] uppercase font-medium hover:bg-background/90 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:-translate-y-0.5"
+              className="group inline-flex items-center gap-3 bg-background text-foreground rounded-md px-8 py-4 text-[13px] tracking-[0.2em] uppercase font-medium hover:bg-background/90 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:-translate-y-0.5"
             >
               {banner.cta_text}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform flip-rtl" />
@@ -293,7 +293,7 @@ export default function Home() {
 
         <div className="relative max-w-[1400px] mx-auto px-6 lg:px-10 w-full grid lg:grid-cols-12 gap-8 items-center pt-10 pb-20">
           <div className="lg:col-span-7 z-10">
-            <p className="text-[11px] tracking-[0.3em] uppercase font-medium text-gold-on-light mb-8 fade-up">
+            <p className="text-[11px] tracking-[0.3em] uppercase font-medium text-muted-foreground mb-8 fade-up">
               {(lang === 'ar' ? heroC?.eyebrow_ar : heroC?.eyebrow_en) ?? t.homeEyebrow}
             </p>
             <h1 className="font-display text-6xl md:text-7xl lg:text-[7.5rem] leading-[0.95] tracking-[-0.03em] fade-up fade-up-2">
@@ -306,7 +306,7 @@ export default function Home() {
             <div className="mt-12 flex flex-wrap items-center gap-6 fade-up fade-up-4">
               <Link
                 to={heroC?.cta1_link ?? '/shop'}
-                className="group inline-flex items-center gap-3 bg-foreground text-background px-8 py-4 text-[13px] tracking-[0.2em] uppercase font-medium hover:bg-foreground/85 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:-translate-y-0.5"
+                className="group inline-flex items-center gap-3 bg-foreground text-background rounded-md px-8 py-4 text-[13px] tracking-[0.2em] uppercase font-medium hover:bg-foreground/85 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:-translate-y-0.5"
               >
                 {(lang === 'ar' ? heroC?.cta1_text_ar : heroC?.cta1_text_en) ?? t.homeHeroCta1}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform flip-rtl" />
@@ -349,7 +349,7 @@ export default function Home() {
             {!productsLoading && heroProduct && (
               <Link
                 to={`/product/${heroProduct.slug}`}
-                className="group absolute bottom-10 start-0 bg-background/95 backdrop-blur-sm border border-border px-5 py-4 shadow-xl scale-in flex items-center gap-4 hover:shadow-2xl transition-shadow"
+                className="group absolute bottom-10 start-0 bg-background/95 backdrop-blur-sm rounded-xl border border-border px-5 py-4 shadow-xl scale-in flex items-center gap-4 hover:shadow-2xl transition-shadow"
                 style={{ animationDelay: '600ms' }}
               >
                 <div className="flex -space-x-3 rtl:space-x-reverse shrink-0">
@@ -364,7 +364,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="font-display text-lg leading-tight">{heroProduct.name}</p>
-                  <p className="text-[11px] tracking-[0.2em] uppercase text-gold-on-light mt-1 inline-flex items-center gap-1.5">
+                  <p className="text-[11px] tracking-[0.2em] uppercase text-muted-foreground mt-1 inline-flex items-center gap-1.5">
                     {t.homeShopTheLook}
                     <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform flip-rtl" />
                   </p>
@@ -391,14 +391,14 @@ export default function Home() {
                 <Link
                   key={cat}
                   to={`/shop?category=${cat}`}
-                  className="px-4 py-2 text-[12px] tracking-[0.1em] uppercase border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors"
+                  className="px-4 py-2 rounded-md text-[12px] tracking-[0.1em] uppercase border border-border hover:border-foreground hover:bg-foreground hover:text-background transition-colors"
                 >
                   {categoryLabel(cat)}
                 </Link>
               ))}
           <Link
             to="/shop"
-            className="ms-auto inline-flex items-center gap-2 bg-foreground text-background px-5 py-2 text-[11px] tracking-[0.2em] uppercase font-medium hover:bg-foreground/85 transition-colors"
+            className="ms-auto inline-flex items-center gap-2 bg-foreground text-background rounded-md px-5 py-2 text-[11px] tracking-[0.2em] uppercase font-medium hover:bg-foreground/85 transition-colors"
           >
             {t.shopViewAll}
             <ArrowRight className="w-3.5 h-3.5 flip-rtl" />
@@ -466,7 +466,7 @@ export default function Home() {
               B
             </span>
             <div className="relative reveal" ref={addRevealRef}>
-              <p className="text-[11px] tracking-[0.3em] uppercase text-gold mb-6">{(lang === 'ar' ? dropC?.eyebrow_ar : dropC?.eyebrow_en) ?? t.homeDropEyebrow}</p>
+              <p className="text-[11px] tracking-[0.3em] uppercase text-background/60 mb-6">{(lang === 'ar' ? dropC?.eyebrow_ar : dropC?.eyebrow_en) ?? t.homeDropEyebrow}</p>
               <h2 className="font-display text-5xl md:text-6xl leading-[0.95] mb-6">
                 {(lang === 'ar' ? dropC?.title1_ar : dropC?.title1_en) ?? t.homeDropTitle1}<br />{(lang === 'ar' ? dropC?.title2_ar : dropC?.title2_en) ?? t.homeDropTitle2}
               </h2>
@@ -482,7 +482,7 @@ export default function Home() {
               )}
               <Link
                 to={dropC?.cta_link ?? '/shop'}
-                className="group inline-flex items-center gap-3 bg-background text-foreground px-8 py-4 text-[13px] tracking-[0.2em] uppercase font-medium hover:bg-background/90 transition-all duration-300"
+                className="group inline-flex items-center gap-3 bg-background text-foreground rounded-md px-8 py-4 text-[13px] tracking-[0.2em] uppercase font-medium hover:bg-background/90 transition-all duration-300"
               >
                 {(lang === 'ar' ? dropC?.cta_text_ar : dropC?.cta_text_en) ?? t.homeDropCta}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform flip-rtl" />
@@ -497,7 +497,7 @@ export default function Home() {
       {trustEnabled && (
       <section className="px-6 lg:px-10 py-20 bg-cream">
         <div className="max-w-[1400px] mx-auto">
-          <p className="text-center text-[11px] tracking-[0.3em] uppercase text-gold-on-light mb-12 reveal" ref={addRevealRef}>
+          <p className="text-center text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-12 reveal" ref={addRevealRef}>
             {(lang === 'ar' ? trustC?.eyebrow_ar : trustC?.eyebrow_en) ?? t.homePromiseEyebrow}
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-10">
@@ -519,7 +519,7 @@ export default function Home() {
       {/* ===== SHOP BY BRAND ===== */}
       <section className="py-16 px-6 lg:px-10 bg-cream border-y border-border/60">
         <div className="max-w-[1400px] mx-auto">
-          <p className="text-center text-[11px] tracking-[0.3em] uppercase text-gold-on-light mb-10">
+          <p className="text-center text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-10">
             {t.brandsEyebrow}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
@@ -534,7 +534,7 @@ export default function Home() {
             ))}
             <Link
               to="/brands"
-              className="inline-flex items-center gap-2 bg-foreground text-background px-5 py-2.5 text-[11px] tracking-[0.2em] uppercase font-medium hover:bg-foreground/85 transition-colors"
+              className="inline-flex items-center gap-2 bg-foreground text-background rounded-md px-5 py-2.5 text-[11px] tracking-[0.2em] uppercase font-medium hover:bg-foreground/85 transition-colors"
             >
               {t.shopViewAll}
               <ArrowRight className="w-3.5 h-3.5 flip-rtl" />
@@ -570,7 +570,7 @@ export default function Home() {
       <section className="py-24 md:py-32 px-6 lg:px-10 bg-cream">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16 reveal" ref={addRevealRef}>
-            <p className="text-[11px] tracking-[0.3em] uppercase text-gold-on-light mb-3">{t.homeTestimonialsEyebrow}</p>
+            <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-3">{t.homeTestimonialsEyebrow}</p>
             <h2 className="font-display text-5xl md:text-6xl">{t.homeTestimonialsTitle}</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">

@@ -38,7 +38,7 @@ export default function SectionHeading({
     return (
       <div className={cn('flex items-end justify-between gap-6', className)}>
         <div>
-          <p className="text-[11px] tracking-[0.3em] uppercase text-gold-on-light mb-3">{eyebrow}</p>
+          <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-3">{eyebrow}</p>
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl leading-[0.95]">{title}</h2>
           {subtitle && <p className="text-muted-foreground font-light text-base mt-4 max-w-md">{subtitle}</p>}
         </div>
@@ -49,7 +49,7 @@ export default function SectionHeading({
 
   return (
     <div className={cn('text-center', className)}>
-      <p className="text-[11px] tracking-[0.3em] uppercase text-gold-on-light mb-3">{eyebrow}</p>
+      <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-3">{eyebrow}</p>
       <h2 className="font-display text-5xl md:text-6xl lg:text-7xl leading-[0.95]">{title}</h2>
       {subtitle && <p className="text-muted-foreground font-light text-base mt-4 max-w-md mx-auto">{subtitle}</p>}
       {viewAllLink && <div className="mt-6">{viewAllLink}</div>}

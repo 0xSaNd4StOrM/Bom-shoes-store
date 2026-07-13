@@ -9,8 +9,10 @@
     --foreground: 0 0% 0%;
     /* Warm cream tone for redesigned homepage sections/product cards --
        distinct from the pure-white --background above (which most existing
-       pages keep using as-is). */
-    --cream: 36 38% 93%;
+       pages keep using as-is). Desaturated to a near-neutral pale beige to
+       match the reference design's palette (was a much warmer/more
+       saturated tan before). */
+    --cream: 36 20% 95%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 0%;
     --popover: 0 0% 100%;

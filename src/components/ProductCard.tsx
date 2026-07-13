@@ -42,10 +42,10 @@ export default function ProductCard({
   return (
     <Link
       to={`/product/${p.slug}`}
-      className={cn('group block fade-up', className)}
+      className={cn('group block fade-up bg-background rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow', className)}
       style={animationDelay ? { animationDelay } : undefined}
     >
-      <div className="relative aspect-square overflow-hidden bg-muted img-zoom">
+      <div className="relative aspect-square overflow-hidden rounded-lg bg-muted img-zoom">
         <img
           src={p.image_url || ''}
           alt={p.name}
@@ -62,7 +62,7 @@ export default function ProductCard({
               </span>
             )}
             {isNew && (
-              <span className="bg-background/90 backdrop-blur-sm px-2.5 py-1 text-[10px] tracking-widest uppercase text-gold-on-light">
+              <span className="bg-background/90 backdrop-blur-sm px-2.5 py-1 text-[10px] tracking-widest uppercase">
                 {t.shopNew}
               </span>
             )}
@@ -95,20 +95,21 @@ export default function ProductCard({
         </div>
 
         {/* Rendered after the hover overlay so it stays on top and clickable at all times,
-            including while the overlay above is active during hover. */}
-        <div className="absolute top-3 end-3">
-          <WishlistButton productId={p.id} className="bg-background/90 backdrop-blur-sm" />
+            including while the overlay above is active during hover. Plain icon, no
+            background chip, matching the reference's minimal top-right heart. */}
+        <div className="absolute top-2 end-2">
+          <WishlistButton productId={p.id} />
         </div>
       </div>
-      <div className="mt-5">
-        <p className="text-[11px] tracking-widest text-muted-foreground uppercase mb-1.5">
+      <div className="mt-4 px-1">
+        <p className="text-[11px] tracking-widest text-muted-foreground uppercase mb-1">
           {categoryLabel}
         </p>
-        <h3 className="font-display text-xl group-hover:text-muted-foreground transition-colors">
+        <h3 className="text-sm font-semibold uppercase tracking-wide group-hover:text-muted-foreground transition-colors">
           {p.name}
         </h3>
         <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm font-medium">
             {formatPrice(Number(p.min_price))}
           </p>
           {p.total_stock > 0 && (
@@ -117,7 +118,7 @@ export default function ProductCard({
               disabled={quickAdding}
               aria-label={t.shopQuickAdd}
               title={t.shopQuickAdd}
-              className="shrink-0 w-8 h-8 rounded-full border border-foreground/30 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-colors cursor-pointer disabled:opacity-50"
+              className="shrink-0 w-8 h-8 rounded-full border border-foreground/20 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-colors cursor-pointer disabled:opacity-50"
             >
               {quickAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
             </button>
