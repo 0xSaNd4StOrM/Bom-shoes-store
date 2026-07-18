@@ -25,6 +25,9 @@ module.exports = {
 				// Warm cream background token for redesigned homepage sections/cards --
 				// additive, kept separate from --background (pure white, unchanged).
 				cream: 'hsl(var(--cream))',
+				// Terracotta accent from the KICKS-style redesign (eyebrows, Sale
+				// link, active wishlist). The old gold gradient is gone.
+				terracotta: '#C8633E',
 				primary: {
 					DEFAULT: '#2B5D3A',
 					foreground: 'hsl(var(--primary-foreground))',

@@ -220,12 +220,13 @@ export default function Layout() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Kept deliberately short (Shop + Brands) rather than listing every
-  // category here too -- Shop already has its own category filter chips,
-  // so duplicating all six categories in the header would just crowd it.
+  // Kept deliberately short (Shop / Brands / Sale) rather than listing every
+  // category here too -- Shop already has its own category filter chips.
+  // `sale` renders in the terracotta accent, matching the reference design.
   const nav = [
     { to: '/shop', label: t.navShop },
     { to: '/brands', label: t.navBrands },
+    { to: '/shop?sale=1', label: t.navSale, sale: true },
   ]
 
   async function handleSignOut() {
@@ -296,12 +297,16 @@ export default function Layout() {
                 key={n.to}
                 to={n.to}
                 className={({ isActive }) => cn(
-                  "text-[12px] tracking-[0.18em] uppercase font-medium transition-colors hover:text-foreground/60 relative group",
-                  isActive && "text-foreground"
+                  "text-[12px] tracking-[0.18em] uppercase font-medium transition-colors relative group",
+                  n.sale ? "text-terracotta hover:text-terracotta/80" : "hover:text-foreground/60",
+                  isActive && !n.sale && "text-foreground"
                 )}
               >
                 {n.label}
-                <span className="absolute -bottom-1 start-0 end-0 h-px bg-foreground scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+                <span className={cn(
+                  "absolute -bottom-1 start-0 end-0 h-px scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left",
+                  n.sale ? "bg-terracotta" : "bg-foreground"
+                )} />
               </NavLink>
             ))}
           </nav>

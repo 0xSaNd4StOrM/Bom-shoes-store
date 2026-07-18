@@ -16,6 +16,8 @@ export default function Shop() {
   const [params, setParams] = useSearchParams()
   const initialCategory = params.get('category') || 'All'
   const search = params.get('search') || ''
+  const brand = params.get('brand') || ''
+  const saleOnly = params.get('sale') === '1'
   const [category, setCategory] = useState(initialCategory)
   const [sort, setSort] = useState('featured')
   const [products, setProducts] = useState<ProductCatalogEntry[]>([])
@@ -61,17 +63,19 @@ export default function Shop() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      // Category and search are independent server-side filters -- both are
-      // ANDed together by chaining .eq()/.textSearch() on the same query.
+      // Category / brand / search / sale are independent server-side filters --
+      // ANDed together by chaining on the same query.
       let query = supabase.from('product_catalog').select('*')
       if (category !== 'All') query = query.eq('category', category)
+      if (brand) query = query.eq('brand', brand)
+      if (saleOnly) query = query.not('sale_price', 'is', null)
       if (search) query = query.textSearch('search_vector', search, { type: 'websearch' })
       const { data } = await query
       setProducts(data || [])
       setLoading(false)
     }
     load()
-  }, [category, search])
+  }, [category, search, brand, saleOnly])
 
   // Active, auto-apply (no code needed) buy-x-get-y promotions -- the only
   // coupon rows the storefront can read at all (see the public RLS policy
@@ -170,13 +174,23 @@ export default function Shop() {
       <div className="max-w-[1400px] mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <p className="text-zen text-muted-foreground mb-4">{t.shopEyebrow}</p>
-          <h1 className="font-display text-5xl md:text-7xl mb-6">{t.shopTitle}</h1>
+          <p className="text-zen text-muted-foreground mb-4">{brand ? t.navBrands : saleOnly ? t.navSale : t.shopEyebrow}</p>
+          <h1 className="font-display text-5xl md:text-7xl mb-6">{brand || (saleOnly ? t.navSale : t.shopTitle)}</h1>
           {search ? (
             <div className="flex items-center justify-center gap-3 flex-wrap">
               <p className="text-muted-foreground font-light">{t.shopSearchingFor(search)}</p>
               <button
                 onClick={clearSearch}
+                className="text-xs tracking-widest uppercase border-b border-foreground pb-0.5 cursor-pointer"
+              >
+                {t.shopClearSearch}
+              </button>
+            </div>
+          ) : (brand || saleOnly) ? (
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <p className="text-muted-foreground font-light">{products.length} {products.length === 1 ? t.piece : t.pieces}</p>
+              <button
+                onClick={() => { params.delete('brand'); params.delete('sale'); setParams(params, { replace: true }) }}
                 className="text-xs tracking-widest uppercase border-b border-foreground pb-0.5 cursor-pointer"
               >
                 {t.shopClearSearch}

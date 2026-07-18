@@ -3,7 +3,6 @@ import { ProductCatalogEntry } from '@/lib/supabase'
 import { useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import WishlistButton from '@/components/WishlistButton'
-import RatingStars from '@/components/RatingStars'
 import { cn } from '@/lib/utils'
 import { Plus, Loader2 } from 'lucide-react'
 
@@ -11,25 +10,26 @@ const NEW_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
 
 type ProductCardProps = {
   product: ProductCatalogEntry
+  /** Localized category label -- used as the small top label only when the
+   *  product has no brand set. */
   categoryLabel: string
-  /** Pre-formatted buy-x-get-y badge text, if an active promo applies to this product. */
+  /** Pre-formatted buy-x-get-y badge text, if an active promo applies. */
   bxgyBadge?: string
-  onQuickView: (productId: string) => void
+  onQuickView?: (productId: string) => void
   onQuickAdd: (product: ProductCatalogEntry, e: React.MouseEvent) => void
   quickAdding?: boolean
   animationDelay?: string
   className?: string
 }
 
-// Shared product grid card -- image, wishlist, hover quick view/quick add,
-// category label, name, price, rating, and the Featured/Only-N-left/BXGY/New
-// badges. Extracted from Shop.tsx so other grids (e.g. the homepage) render
-// an identical card instead of a second copy of this markup.
+// Shared product grid card (homepage curated grid + Shop). Bordered white card
+// with a soft "studio pedestal" media area (contained product shot), brand +
+// name + price, a SALE/NEW pill and a circular add-to-cart -- matching the
+// KICKS-style storefront design.
 export default function ProductCard({
   product: p,
   categoryLabel,
   bxgyBadge,
-  onQuickView,
   onQuickAdd,
   quickAdding = false,
   animationDelay,
@@ -38,93 +38,88 @@ export default function ProductCard({
   const t = useT()
   const { formatPrice } = useCurrency()
   const isNew = Date.now() - new Date(p.created_at).getTime() < NEW_WINDOW_MS
+  const hasSale = p.sale_price != null && Number(p.sale_price) < Number(p.min_price)
+  const displayPrice = hasSale ? Number(p.sale_price) : Number(p.min_price)
+  const topLabel = p.brand || categoryLabel
 
   return (
     <Link
       to={`/product/${p.slug}`}
-      className={cn('group block fade-up bg-background rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow', className)}
+      className={cn(
+        'group flex flex-col fade-up bg-background border border-border rounded-[14px] p-[18px] transition-all duration-300 hover:-translate-y-[3px] hover:shadow-[0_18px_44px_rgba(20,20,20,0.10)] hover:border-[#d6d1c5]',
+        className
+      )}
       style={animationDelay ? { animationDelay } : undefined}
     >
-      <div className="relative aspect-square overflow-hidden rounded-lg bg-muted img-zoom">
+      <div className="relative bg-[#f3f1ec] rounded-[10px] aspect-square overflow-hidden flex items-center justify-center mb-[18px]">
         <img
           src={p.image_url || ''}
           alt={p.name}
-          className="w-full h-full object-cover"
+          loading="lazy"
+          className="w-[82%] h-[82%] object-contain transition-transform duration-500 group-hover:scale-105"
         />
 
-        {/* Featured/New badges stack in the same corner -- distinct signals,
-            a product can be both at once. */}
-        {(p.featured || isNew) && (
-          <div className="absolute top-3 start-3 flex flex-col items-start gap-1.5">
-            {p.featured && (
-              <span className="bg-background/90 backdrop-blur-sm px-2.5 py-1 text-[10px] tracking-widest uppercase">
-                {t.shopFeatured}
-              </span>
-            )}
-            {isNew && (
-              <span className="bg-background/90 backdrop-blur-sm px-2.5 py-1 text-[10px] tracking-widest uppercase">
-                {t.shopNew}
-              </span>
-            )}
-          </div>
-        )}
-
-        {p.total_stock < 10 && (
-          <div className="absolute bottom-3 start-3 bg-foreground/90 text-background px-2.5 py-1 text-[10px] tracking-widest uppercase">
+        {p.total_stock < 10 && p.total_stock > 0 && (
+          <div className="absolute bottom-3 start-3 bg-foreground/90 text-background px-2.5 py-1 text-[10px] tracking-widest uppercase rounded-full">
             {t.shopOnlyLeft(p.total_stock)}
           </div>
         )}
+        {p.total_stock === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+            <span className="text-[11px] tracking-widest uppercase text-muted-foreground">{t.productOutOfStock}</span>
+          </div>
+        )}
         {bxgyBadge && (
-          <div className="absolute bottom-3 end-3 bg-background/90 backdrop-blur-sm px-2.5 py-1 text-[10px] tracking-widest uppercase">
+          <div className="absolute bottom-3 end-3 bg-background/90 backdrop-blur-sm px-2.5 py-1 text-[10px] tracking-widest uppercase rounded-full">
             {bxgyBadge}
           </div>
         )}
 
-        {/* Quick view -- centered so it never collides with the corner badges above.
-            pointer-events-none until hovered, otherwise this full-cover div would eat
-            every click on the card (including the Link navigation) even while invisible.
-            Quick-add moved to the persistent circular button in the price row below,
-            matching the reference layout instead of a second hover button here. */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300 bg-black/0 group-hover:bg-black/5">
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickView(p.id) }}
-            className="bg-background/95 backdrop-blur-sm px-4 py-2 text-[10px] tracking-widest uppercase hover:bg-background transition-colors cursor-pointer"
-          >
-            {t.shopQuickView}
-          </button>
-        </div>
-
-        {/* Rendered after the hover overlay so it stays on top and clickable at all times,
-            including while the overlay above is active during hover. Plain icon, no
-            background chip, matching the reference's minimal top-right heart. */}
-        <div className="absolute top-2 end-2">
-          <WishlistButton productId={p.id} />
+        <div className="absolute top-3 end-3">
+          <WishlistButton
+            productId={p.id}
+            className="p-0 w-8 h-8 rounded-full bg-white/85 backdrop-blur-sm shadow-sm flex items-center justify-center"
+          />
         </div>
       </div>
-      <div className="mt-4 px-1">
-        <p className="text-[11px] tracking-widest text-muted-foreground uppercase mb-1">
-          {categoryLabel}
-        </p>
-        <h3 className="text-sm font-semibold uppercase tracking-wide group-hover:text-muted-foreground transition-colors">
+
+      <div className="px-0.5">
+        <span className="block text-[11px] font-semibold tracking-[0.1em] uppercase text-muted-foreground mb-1">
+          {topLabel}
+        </span>
+        <h3 className="text-sm font-semibold uppercase tracking-wide leading-snug text-foreground min-h-[36px] group-hover:text-muted-foreground transition-colors">
           {p.name}
         </h3>
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="text-sm font-medium">
-            {formatPrice(Number(p.min_price))}
-          </p>
+        <div className="mt-2 flex items-baseline gap-2">
+          <span className="text-base font-bold text-foreground">{formatPrice(displayPrice)}</span>
+          {hasSale && (
+            <span className="text-xs text-muted-foreground line-through">{formatPrice(Number(p.min_price))}</span>
+          )}
+        </div>
+        <div className="mt-3.5 flex items-center justify-between gap-2">
+          {hasSale ? (
+            <span className="inline-block text-[10px] font-semibold tracking-[0.12em] uppercase text-white bg-terracotta px-2.5 py-1 rounded-full">
+              {t.shopSale}
+            </span>
+          ) : isNew ? (
+            <span className="inline-block text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground bg-[#f3f1ec] px-2.5 py-1 rounded-full">
+              {t.shopNew}
+            </span>
+          ) : (
+            <span />
+          )}
           {p.total_stock > 0 && (
             <button
               onClick={(e) => onQuickAdd(p, e)}
               disabled={quickAdding}
               aria-label={t.shopQuickAdd}
               title={t.shopQuickAdd}
-              className="shrink-0 w-8 h-8 rounded-full border border-foreground/20 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-colors cursor-pointer disabled:opacity-50"
+              className="shrink-0 w-[34px] h-[34px] rounded-full border border-foreground text-foreground flex items-center justify-center hover:bg-foreground hover:text-background hover:scale-105 transition-all cursor-pointer disabled:opacity-50"
             >
               {quickAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
             </button>
           )}
         </div>
-        <RatingStars rating={p.avg_rating} count={p.review_count} className="mt-1.5" />
       </div>
     </Link>
   )

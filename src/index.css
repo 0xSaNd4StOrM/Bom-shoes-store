@@ -7,12 +7,10 @@
     --radius: 0.5rem;
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
-    /* Warm cream tone for redesigned homepage sections/product cards --
-       distinct from the pure-white --background above (which most existing
-       pages keep using as-is). Desaturated to a near-neutral pale beige to
-       match the reference design's palette (was a much warmer/more
-       saturated tan before). */
-    --cream: 36 20% 95%;
+    /* Page background for the redesigned storefront (#f5f3ef) -- a pale
+       neutral beige matching the KICKS-style reference. Distinct from the
+       pure-white --background (kept for admin/checkout surfaces). */
+    --cream: 40 24% 95%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 0%;
     --popover: 0 0% 100%;
@@ -27,8 +25,8 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
+    --border: 38 18% 89%;
+    --input: 38 18% 89%;
     --ring: 38 60% 50%;
   }
 
@@ -43,10 +41,14 @@
     scroll-behavior: smooth;
   }
 
+  /* Latin (default / English) uses Inter body + Playfair Display headings to
+     match the KICKS-style design. Arabic swaps to Cairo throughout via the
+     body.font-arabic class (toggled in LanguageContext) since Playfair has no
+     Arabic glyphs. */
   body {
     background: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: 'Cairo', 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   body.font-arabic {
@@ -54,8 +56,8 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Cairo', Georgia, serif;
-    font-weight: 600;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
     letter-spacing: -0.02em;
   }
 
@@ -66,7 +68,7 @@
   body.font-arabic h5,
   body.font-arabic h6 {
     font-family: 'Cairo', 'Amiri', serif;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0;
     line-height: 1.4;
   }
@@ -74,14 +76,17 @@
 
 @layer utilities {
   .font-display {
-    font-family: 'Cairo', Georgia, serif;
+    font-family: 'Playfair Display', Georgia, serif;
   }
   .font-sans {
-    font-family: 'Cairo', 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   body.font-arabic .font-display {
     font-family: 'Cairo', 'Amiri', serif;
+  }
+  body.font-arabic .font-sans {
+    font-family: 'Cairo', 'Noto Naskh Arabic', sans-serif;
   }
 
   .text-zen {

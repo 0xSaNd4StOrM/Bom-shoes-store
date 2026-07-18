@@ -19,6 +19,7 @@ export const translations = {
     navDerbies: 'Derbies',
     navSandals: 'Sandals',
     navBrands: 'Brands',
+    navSale: 'Sale',
 
     // Account menu
     myAccount: 'My account',
@@ -158,6 +159,7 @@ export const translations = {
     shopViewAll: 'View all',
     shopFeatured: 'Featured',
     shopNew: 'New',
+    shopSale: 'Sale',
     shopOnlyLeft: (n: number) => `Only ${n} left`,
     shopSearchingFor: (q: string) => `Results for "${q}"`,
     shopClearSearch: 'Clear search',
@@ -604,6 +606,7 @@ export const translations = {
     navDerbies: 'دربي',
     navSandals: 'صنادل',
     navBrands: 'الماركات',
+    navSale: 'تخفيضات',
 
     // Account menu
     myAccount: 'حسابي',
@@ -743,6 +746,7 @@ export const translations = {
     shopViewAll: 'عرض الكل',
     shopFeatured: 'مختارة',
     shopNew: 'جديد',
+    shopSale: 'تخفيض',
     shopOnlyLeft: (n: number) => `بقي ${n} فقط`,
     shopSearchingFor: (q: string) => `نتائج "${q}"`,
     shopClearSearch: 'إلغاء البحث',

@@ -35,11 +35,11 @@ export default function WishlistButton({ productId, className }: WishlistButtonP
       aria-label={wishlisted ? t.wishlistRemove : t.wishlistAdd}
       aria-pressed={wishlisted}
       className={cn(
-        'p-2 cursor-pointer transition-colors hover:text-foreground/60',
+        'p-2 cursor-pointer transition-colors hover:text-terracotta',
         className
       )}
     >
-      <Heart className={cn('w-5 h-5', wishlisted && 'fill-foreground text-foreground')} />
+      <Heart className={cn('w-5 h-5', wishlisted && 'fill-terracotta text-terracotta')} />
     </button>
   )
 }

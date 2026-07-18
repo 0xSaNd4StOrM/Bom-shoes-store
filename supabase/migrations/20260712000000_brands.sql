@@ -1,11 +1,9 @@
 -- Admin-managed product brands, so BOM Store can operate as a multi-brand
--- retailer (not just its own in-house designs). Mirrors the `categories`
--- table exactly: `value` is stored as free text on products.brand (no FK,
--- consistent with how products.category already works), public SELECT,
--- admin-only write. `logo_url` is nullable -- until the admin uploads a real
--- licensed logo asset for a brand, the storefront renders that brand's name
--- as a plain wordmark instead of fabricating logo artwork.
-create table public.brands (
+-- retailer. Mirrors the `categories` table: `value` stored as free text on
+-- products.brand (no FK), public SELECT, admin-only write. logo_url nullable
+-- -- until a real licensed logo asset is uploaded, the storefront renders the
+-- brand's name as a plain wordmark.
+create table if not exists public.brands (
   value text primary key,
   name text not null,
   logo_url text,
@@ -18,35 +16,37 @@ comment on table public.brands is
 
 alter table public.brands enable row level security;
 
+drop policy if exists "Public can view brands" on public.brands;
 create policy "Public can view brands"
   on public.brands for select
   using (true);
 
+drop policy if exists "Admins can insert brands" on public.brands;
 create policy "Admins can insert brands"
   on public.brands for insert
   with check (public.is_admin());
 
+drop policy if exists "Admins can update brands" on public.brands;
 create policy "Admins can update brands"
   on public.brands for update
   using (public.is_admin())
   with check (public.is_admin());
 
+drop policy if exists "Admins can delete brands" on public.brands;
 create policy "Admins can delete brands"
   on public.brands for delete
   using (public.is_admin());
 
 insert into public.brands (value, name, position) values
-  ('Prada', 'Prada', 0),
-  ('Nike', 'Nike', 1),
-  ('Balenciaga', 'Balenciaga', 2),
-  ('Adidas', 'Adidas', 3),
+  ('Nike', 'Nike', 0),
+  ('Adidas', 'Adidas', 1),
+  ('New Balance', 'New Balance', 2),
+  ('Puma', 'Puma', 3),
   ('Amiri', 'Amiri', 4),
-  ('New Balance', 'New Balance', 5),
-  ('Gucci', 'Gucci', 6)
+  ('Prada', 'Prada', 5),
+  ('Gucci', 'Gucci', 6),
+  ('Balenciaga', 'Balenciaga', 7)
 on conflict (value) do nothing;
 
 -- products.brand: nullable free text, same shape as products.category.
--- Left null on every existing demo product -- assigning real products to
--- real brands is a real catalog decision for the admin to make, not one to
--- guess at here.
 alter table public.products add column if not exists brand text;

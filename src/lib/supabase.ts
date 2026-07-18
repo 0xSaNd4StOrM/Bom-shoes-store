@@ -24,6 +24,21 @@ export type Product = {
   materials: string | null
   weight_grams: number | null
   tags: string[]
+  // Free-text brand value, matching a public.brands.value (or null for
+  // BOM Store's own in-house products). Added when the store became a
+  // multi-brand retailer.
+  brand: string | null
+}
+
+// Admin-managed product brand. `value` is stored free-text on products.brand
+// (no FK). logo_url is null until a real licensed logo is uploaded, in which
+// case the storefront shows it instead of the plain-text wordmark.
+export type Brand = {
+  value: string
+  name: string
+  logo_url: string | null
+  position: number
+  created_at: string
 }
 
 // cost_price (wholesale/COGS) deliberately lives in its own admin-only-select

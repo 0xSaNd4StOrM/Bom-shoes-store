@@ -7,6 +7,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { CartProvider } from './contexts/CartContext'
 import { CurrencyProvider } from './contexts/CurrencyContext'
 import { CategoriesProvider } from './contexts/CategoriesContext'
+import { BrandsProvider } from './contexts/BrandsContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { WishlistProvider } from './contexts/WishlistContext'
 import App from './App.tsx'
@@ -19,24 +20,26 @@ createRoot(document.getElementById('root')!).render(
         <LanguageProvider>
           <CurrencyProvider>
             <CategoriesProvider>
-              <AuthProvider>
-                <WishlistProvider>
-                  <CartProvider>
-                    <App />
-                  <Toaster
-                    position="top-center"
-                    toastOptions={{
-                      style: {
-                        background: 'hsl(var(--card))',
-                        color: 'hsl(var(--foreground))',
-                        border: '1px solid hsl(var(--border))',
-                        fontSize: '0.875rem',
-                      },
-                    }}
-                    />
-                  </CartProvider>
-                </WishlistProvider>
-              </AuthProvider>
+              <BrandsProvider>
+                <AuthProvider>
+                  <WishlistProvider>
+                    <CartProvider>
+                      <App />
+                    <Toaster
+                      position="top-center"
+                      toastOptions={{
+                        style: {
+                          background: 'hsl(var(--card))',
+                          color: 'hsl(var(--foreground))',
+                          border: '1px solid hsl(var(--border))',
+                          fontSize: '0.875rem',
+                        },
+                      }}
+                      />
+                    </CartProvider>
+                  </WishlistProvider>
+                </AuthProvider>
+              </BrandsProvider>
             </CategoriesProvider>
           </CurrencyProvider>
         </LanguageProvider>
