@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "pnpm install --prefer-offline",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/((?!assets/|brands/|shoes/|stock/|images/|favicon\\.svg|robots\\.txt).*)", "destination": "/index.html" }
+  ]
+}
