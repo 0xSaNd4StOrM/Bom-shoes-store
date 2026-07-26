@@ -30,6 +30,8 @@ export type CreateOrderRequest = {
   items: CreateOrderItem[]
   customer: CreateOrderCustomer
   couponCode?: string
+  // Only sets the language of Kashier's hosted payment page.
+  lang?: string
 }
 
 export type CreateOrderResponse = {

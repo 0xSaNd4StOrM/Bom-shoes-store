@@ -98,6 +98,7 @@ export default function Checkout() {
           notes: form.notes,
         },
         ...(couponCode ? { couponCode } : {}),
+        lang,
       }
 
       const { data, error } = await supabase.functions.invoke<CreateOrderResponse>('create-order', { body })

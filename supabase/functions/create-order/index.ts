@@ -63,11 +63,14 @@ Deno.serve(async (req: Request) => {
       items?: OrderItemInput[]
       customer?: CustomerInput
       couponCode?: string
+      lang?: string
     } | null
 
     const items = body?.items
     const customer = body?.customer
     const couponCode = typeof body?.couponCode === 'string' ? body.couponCode.trim() : ''
+    // Only controls the language of Kashier's hosted payment page.
+    const lang = body?.lang === 'ar' ? 'ar' : 'en'
 
     if (!Array.isArray(items) || items.length === 0) {
       return jsonResponse({ error: 'Cart is empty' }, 400)
@@ -150,7 +153,7 @@ Deno.serve(async (req: Request) => {
 
     const origin = resolveAllowedOrigin(req.headers.get('origin'))
 
-    const checkoutUrl = await buildKashierCheckoutUrl({ orderRef, amount: total, origin })
+    const checkoutUrl = await buildKashierCheckout({ orderRef, amount: total, origin, customerEmail: customer.email, lang })
 
     // ponytail: the frontend checkout summary needs this to show what was
     // actually applied (couponCode re-validation can differ from the Cart
@@ -212,9 +215,72 @@ function getUserIdFromAuthHeader(req: Request): string | null {
   }
 }
 
-// Builds the signed Kashier hosted-checkout URL. Per
-// developers.kashier.io/payment/payment-sessions, the hosted payment page
-// takes mid/orderId/amount/currency/hash/merchantRedirect query params, and
+type CheckoutOpts = { orderRef: string; amount: number; origin: string; customerEmail: string; lang: string }
+
+// Returns the URL to redirect the customer to for payment. Prefers the modern
+// Payment Sessions API (payments.kashier.io) when KASHIER_SECRET_KEY is set;
+// otherwise falls back to the legacy signed iframe hosted-checkout URL so
+// checkout never hard-breaks if the secret hasn't been configured yet.
+async function buildKashierCheckout(opts: CheckoutOpts): Promise<string> {
+  if (Deno.env.get('KASHIER_SECRET_KEY')) {
+    return await createKashierSession(opts)
+  }
+  console.warn('create-order: KASHIER_SECRET_KEY not set -- using legacy iframe checkout URL')
+  return await buildKashierCheckoutUrl(opts)
+}
+
+// Modern integration: POST a payment session to Kashier and redirect the
+// customer to the returned `sessionUrl` (payments.kashier.io). Per
+// developers.kashier.io/payment/payment-sessions. Auth is server-to-server:
+// Authorization = the account Secret Key, api-key = the Payment API Key.
+async function createKashierSession(opts: CheckoutOpts): Promise<string> {
+  const mid = Deno.env.get('KASHIER_MERCHANT_ID')
+  const apiKey = Deno.env.get('KASHIER_API_KEY')
+  const secretKey = Deno.env.get('KASHIER_SECRET_KEY')
+  if (!mid || !apiKey || !secretKey) throw new Error('Kashier Payment Sessions credentials are not configured')
+
+  const mode = Deno.env.get('KASHIER_MODE') === 'live' ? 'live' : 'test'
+  const apiBase = mode === 'live' ? 'https://api.kashier.io' : 'https://test-api.kashier.io'
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+
+  // `order` becomes the webhook's merchantOrderId, which kashier-webhook matches
+  // against orders.kashier_order_id -- so it MUST be our orderRef.
+  const requestBody = {
+    amount: opts.amount.toFixed(2),
+    currency: CURRENCY,
+    order: opts.orderRef,
+    merchantId: mid,
+    merchantRedirect: `${opts.origin}/checkout/success?orderId=${encodeURIComponent(opts.orderRef)}`,
+    display: opts.lang === 'ar' ? 'ar' : 'en',
+    type: 'one-time',
+    allowedMethods: 'card,wallet',
+    interactionSource: 'ECOMMERCE',
+    enable3DS: true,
+    serverWebhook: `${supabaseUrl}/functions/v1/kashier-webhook`,
+    description: `BOM Store order ${opts.orderRef}`,
+    customer: { email: opts.customerEmail, reference: opts.orderRef },
+    metaData: { orderRef: opts.orderRef },
+  }
+
+  const res = await fetch(`${apiBase}/v3/payment/sessions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': secretKey,
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  })
+
+  const json = await res.json().catch(() => null) as { sessionUrl?: string } | null
+  if (!res.ok || !json?.sessionUrl) {
+    console.error('create-order: Kashier session creation failed', res.status, JSON.stringify(json))
+    throw new Error('Kashier session creation failed')
+  }
+  return json.sessionUrl
+}
+
+// Legacy fallback: signed iframe hosted-checkout URL.
 // hash = HMAC-SHA256("/?payment=" + mid + "." + orderId + "." + amount + "." + currency, apiKey).
 async function buildKashierCheckoutUrl(opts: { orderRef: string; amount: number; origin: string }): Promise<string> {
   const mid = Deno.env.get('KASHIER_MERCHANT_ID')
