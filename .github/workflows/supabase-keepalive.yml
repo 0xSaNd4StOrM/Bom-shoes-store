@@ -1,0 +1,33 @@
+name: Supabase keep-alive
+
+# Supabase Free plan pauses a project after 7 days with no database activity.
+# This runs a tiny authenticated REST query 3x/week (Mon/Wed/Fri) so the
+# project never goes idle long enough to pause. It runs on GitHub's servers
+# (external to Supabase) -- a paused project can't wake itself, so the pinger
+# must live somewhere else. Uses the PUBLIC anon key (the same one shipped in
+# the web app), so there's no secret to configure.
+
+on:
+  schedule:
+    - cron: '0 8 * * 1,3,5'   # 08:00 UTC on Mon, Wed, Fri
+  workflow_dispatch: {}         # allow manual runs from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase (real Postgres activity)
+        env:
+          SUPABASE_URL: https://nwkvxaavplatwjwwvgch.supabase.co
+          # Public anon key -- safe to commit (already shipped in the client bundle).
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53a3Z4YWF2cGxhdHdqd3d2Z2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MjIyMTUsImV4cCI6MjA5OTA5ODIxNX0.EMmEsi2OJb_DQN1wz7CJl8zR5hcvFX9rANHjLKyiTRw
+        run: |
+          echo "Pinging Supabase to keep the free project awake..."
+          # --fail makes a non-2xx response fail the job, so a paused/down
+          # project shows up as a failed run (GitHub emails you).
+          curl --fail --show-error --silent \
+            "$SUPABASE_URL/rest/v1/site_content?select=key&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -o /dev/null -w "HTTP %{http_code}\n"
+          echo "Keep-alive ping OK."

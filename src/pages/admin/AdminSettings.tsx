@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase, StoreSettings } from '@/lib/supabase'
 import { useCategories } from '@/contexts/CategoriesContext'
 import { useBrands } from '@/contexts/BrandsContext'
+import { compressImage } from '@/lib/compressImage'
 import { useT } from '@/contexts/LanguageContext'
 import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -125,11 +126,13 @@ export default function AdminSettings() {
     toast.success(t.adminSaved)
   }
 
-  async function handleUpload(field: UploadField, file: File | undefined, setUploading: (v: boolean) => void) {
-    if (!file) return
+  async function handleUpload(field: UploadField, raw: File | undefined, setUploading: (v: boolean) => void) {
+    if (!raw) return
     setUploading(true)
     try {
       const prefix = field === 'logo_url' ? 'logo' : 'favicon'
+      // Compress the logo; leave the favicon untouched (it must stay tiny/native).
+      const file = field === 'logo_url' ? await compressImage(raw, { maxDim: 600 }) : raw
       const path = `${prefix}/${Date.now()}-${file.name}`
       const { error: upErr } = await supabase.storage.from('store-assets').upload(path, file)
       if (upErr) throw upErr
@@ -247,10 +250,12 @@ export default function AdminSettings() {
     reloadBrands()
   }
 
-  async function handleUploadBrandLogo(value: string, file: File | undefined) {
-    if (!file) return
+  async function handleUploadBrandLogo(value: string, raw: File | undefined) {
+    if (!raw) return
     setUploadingBrandLogo(value)
     try {
+      // Compress before upload (keeps transparent-webp logos small).
+      const file = await compressImage(raw, { maxDim: 600 })
       const safe = value.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase()
       const path = `brands/${safe}-${Date.now()}-${file.name}`
       const { error: upErr } = await supabase.storage.from('store-assets').upload(path, file)

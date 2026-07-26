@@ -5,6 +5,7 @@ import { useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useCategories } from '@/contexts/CategoriesContext'
 import { useBrands } from '@/contexts/BrandsContext'
+import { compressImage } from '@/lib/compressImage'
 import { Loader2, Plus, X, Edit2, Trash2, Star, Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -183,7 +184,9 @@ export default function AdminProducts() {
     setUploading(true)
     try {
       let position = images.length ? Math.max(...images.map(i => i.position)) + 1 : 0
-      for (const file of Array.from(files)) {
+      for (const raw of Array.from(files)) {
+        // Compress before upload to stay lean on free-tier storage/egress.
+        const file = await compressImage(raw, { maxDim: 1200 })
         const path = `${productId}/${Date.now()}-${file.name}`
         const { error: upErr } = await supabase.storage.from('product-images').upload(path, file)
         if (upErr) throw upErr
