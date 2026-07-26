@@ -94,6 +94,13 @@ export default function AdminLayout() {
     { to: '/admin/settings', label: t.adminNavSettings, icon: Settings },
   ]
 
+  // The section name for the current route, shown as the page heading so
+  // every admin screen states where you are (previously they rendered
+  // straight into a table with no title).
+  const activeNav = navItems.find(item =>
+    item.end ? location.pathname === item.to : location.pathname === item.to || location.pathname.startsWith(item.to + '/')
+  )
+
   // Shared between the persistent desktop sidebar and the mobile drawer so
   // the active-state/badge treatment never drifts between the two.
   function renderNavItems(onNavigate?: () => void) {
@@ -172,13 +179,13 @@ export default function AdminLayout() {
               >
                 <Menu className="w-5 h-5" />
               </button>
-              <div className="lg:hidden">
+              <div>
                 <p className="text-zen text-muted-foreground mb-2">{t.adminEyebrow}</p>
-                <h1 className="font-display text-3xl">{t.adminTitle}</h1>
+                <h1 className="font-display text-3xl">{activeNav?.label ?? t.adminTitle}</h1>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">{profile?.email}</span>
+              <span className="hidden sm:inline text-sm text-muted-foreground">{profile?.email}</span>
               <button
                 onClick={signOut}
                 className="p-2 border border-border hover:bg-card transition-colors cursor-pointer"
