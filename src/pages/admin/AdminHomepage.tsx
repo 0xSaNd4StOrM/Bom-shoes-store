@@ -24,7 +24,7 @@ const TABS = [
   { key: 'limited_drop', label: 'Limited Drop' },
   { key: 'trust_badges', label: 'Trust Badges' },
   { key: 'newsletter', label: 'Newsletter' },
-  { key: 'categories_strip', label: 'Categories Strip' },
+  { key: 'categories_strip', label: 'Brand Bar' },
   { key: 'announcement', label: 'Announcement Bar' },
   { key: 'footer_links', label: 'Footer Links' },
   { key: 'testimonials', label: 'Testimonials' },
@@ -111,7 +111,7 @@ export default function AdminHomepage() {
         />
       )}
       {tab === 'newsletter' && <NewsletterTab value={drafts.newsletter || {}} setField={(f, v) => setField('newsletter', f, v)} onSave={() => saveKey('newsletter')} readOnly={!isAdmin} />}
-      {tab === 'categories_strip' && <CategoriesStripTab value={drafts.categories_strip || {}} setField={(f, v) => setField('categories_strip', f, v)} onSave={() => saveKey('categories_strip')} readOnly={!isAdmin} />}
+      {tab === 'categories_strip' && <BrandBarTab value={drafts.categories_strip || {}} setField={(f, v) => setField('categories_strip', f, v)} onSave={() => saveKey('categories_strip')} readOnly={!isAdmin} />}
       {tab === 'announcement' && <AnnouncementTab value={drafts.announcement || { lines: [] }} setField={(f, v) => setField('announcement', f, v)} onSave={() => saveKey('announcement')} readOnly={!isAdmin} />}
       {tab === 'footer_links' && <FooterLinksTab value={drafts.footer_links || { items: [] }} setField={(f, v) => setField('footer_links', f, v)} onSave={() => saveKey('footer_links')} readOnly={!isAdmin} />}
       {tab === 'testimonials' && <TestimonialsTab />}
@@ -430,13 +430,15 @@ function NewsletterTab({ value, setField, onSave, readOnly }: { value: any; setF
   )
 }
 
-// ---------- Categories Strip ----------
+// ---------- Brand Bar ----------
+// Note: the underlying site_content key is still `categories_strip` (kept to
+// avoid a migration); it now controls the homepage brand-logos bar.
 
-function CategoriesStripTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+function BrandBarTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
   return (
     <Card>
       <p className="text-sm text-muted-foreground">
-        The category tiles strip is generated automatically from your product categories -- there's nothing else to edit here.
+        The brand bar shows your brands (as names, or logos once uploaded) below the hero. Its contents come from your Brands list -- use the toggle below to show or hide the whole bar on the homepage.
       </p>
       <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />

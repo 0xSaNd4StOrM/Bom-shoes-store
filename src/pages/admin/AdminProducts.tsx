@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useCategories } from '@/contexts/CategoriesContext'
+import { useBrands } from '@/contexts/BrandsContext'
 import { Loader2, Plus, X, Edit2, Trash2, Star, Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -12,7 +13,7 @@ type SortDir = 'asc' | 'desc'
 
 const EMPTY: Partial<Product> = {
   name: '', slug: '', description: '', price: 0, category: 'Sneakers',
-  featured: false, sale_price: null, materials: '', weight_grams: null, tags: [],
+  brand: null, featured: false, sale_price: null, materials: '', weight_grams: null, tags: [],
 }
 
 // Local editable row for the variant list. `_key` is a stable React key that
@@ -64,6 +65,7 @@ export default function AdminProducts() {
   const t = useT()
   const { formatPrice, currency } = useCurrency()
   const { categories, categoryLabel } = useCategories()
+  const { brands } = useBrands()
   const CATEGORY_VALUES = categories.map(c => c.value)
 
   function toggleSort(key: SortKey) {
@@ -242,6 +244,7 @@ export default function AdminProducts() {
         description: editing.description || '',
         price: Number(editing.price),
         category: editing.category || 'Sneakers',
+        brand: editing.brand?.trim() ? editing.brand.trim() : null,
         featured: !!editing.featured,
         sale_price: editing.sale_price === null || editing.sale_price === undefined || (editing.sale_price as any) === '' ? null : Number(editing.sale_price),
         materials: editing.materials?.trim() ? editing.materials.trim() : null,
@@ -457,6 +460,21 @@ export default function AdminProducts() {
                   >
                     {CATEGORY_VALUES.map(c => (
                       <option key={c} value={c}>{categoryLabel(c)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Brand</label>
+                  <select
+                    value={editing.brand ?? ''}
+                    onChange={e => setEditing({ ...editing, brand: e.target.value || null })}
+                    className="w-full bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none cursor-pointer"
+                  >
+                    <option value="">— None (BOM Store own) —</option>
+                    {brands.map(b => (
+                      <option key={b.value} value={b.value}>{b.name}</option>
                     ))}
                   </select>
                 </div>

@@ -91,7 +91,10 @@ export default function AdminDashboard() {
         pending: (orders || []).filter(o => o.status === 'pending' || o.status === 'confirmed').length,
       })
       setRecentOrders((orders || []).sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5))
-      setTopProducts((products || []).sort((a, b) => (b.total_stock < 10 ? 1 : 0) - (a.total_stock < 10 ? 1 : 0)).slice(0, 5))
+      // Only genuinely low-stock products (< 10) belong under "Low Stock" --
+      // previously this sorted low-first but always sliced 5, so a fully-
+      // stocked catalog still listed 5 items as if they were low.
+      setTopProducts((products || []).filter(p => p.total_stock < 10).sort((a, b) => a.total_stock - b.total_stock).slice(0, 5))
       setRevenueChart(revenueByDay(paidOrders))
       setSellersChart(bestSellers(paidOrders))
       setLoading(false)

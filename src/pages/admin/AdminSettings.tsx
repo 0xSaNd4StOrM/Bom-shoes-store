@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase, StoreSettings } from '@/lib/supabase'
 import { useCategories } from '@/contexts/CategoriesContext'
+import { useBrands } from '@/contexts/BrandsContext'
 import { useT } from '@/contexts/LanguageContext'
-import { Loader2, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
+import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 type Translations = ReturnType<typeof useT>
@@ -47,6 +48,11 @@ export default function AdminSettings() {
   const [newLabelEn, setNewLabelEn] = useState('')
   const [newLabelAr, setNewLabelAr] = useState('')
   const [savingCategory, setSavingCategory] = useState(false)
+  const { brands, reload: reloadBrands } = useBrands()
+  const [newBrandName, setNewBrandName] = useState('')
+  const [savingBrand, setSavingBrand] = useState(false)
+  // brand `value` whose logo is currently uploading (null = none)
+  const [uploadingBrandLogo, setUploadingBrandLogo] = useState<string | null>(null)
   const t = useT()
 
   async function load() {
@@ -196,6 +202,76 @@ export default function AdminSettings() {
     reloadCategories()
   }
 
+  // ----- Brands (mirror of categories, plus a logo upload per brand) -----
+  async function handleAddBrand() {
+    const name = newBrandName.trim()
+    if (!name) { toast.error(t.adminBrandNameRequired); return }
+    setSavingBrand(true)
+    const position = brands.length ? Math.max(...brands.map(b => b.position)) + 1 : 0
+    // value == name (same convention categories use); products.brand stores it.
+    const { error } = await supabase.from('brands').insert({ value: name, name, position })
+    setSavingBrand(false)
+    if (error) { toast.error(error.message || t.adminCouldNotAddBrand); return }
+    setNewBrandName('')
+    toast.success(t.adminBrandAdded)
+    reloadBrands()
+  }
+
+  async function handleUpdateBrandName(value: string, name: string) {
+    const { error } = await supabase.from('brands').update({ name }).eq('value', value)
+    if (error) { toast.error(error.message || t.adminSaveFailed); return }
+    reloadBrands()
+  }
+
+  async function handleDeleteBrand(value: string) {
+    if (!confirm(t.adminDeleteConfirm(value))) return
+    // Same free-text guard categories use -- products.brand isn't an FK.
+    const { count } = await supabase
+      .from('products').select('id', { count: 'exact', head: true }).eq('brand', value)
+    if (count) { toast.error(t.adminBrandInUse(count)); return }
+    const { error } = await supabase.from('brands').delete().eq('value', value)
+    if (error) { toast.error(error.message || t.adminDeleteFailed); return }
+    toast.success(t.adminBrandDeleted)
+    reloadBrands()
+  }
+
+  async function handleMoveBrand(index: number, direction: -1 | 1) {
+    const target = brands[index + direction]
+    const current = brands[index]
+    if (!target) return
+    await Promise.all([
+      supabase.from('brands').update({ position: target.position }).eq('value', current.value),
+      supabase.from('brands').update({ position: current.position }).eq('value', target.value),
+    ])
+    reloadBrands()
+  }
+
+  async function handleUploadBrandLogo(value: string, file: File | undefined) {
+    if (!file) return
+    setUploadingBrandLogo(value)
+    try {
+      const safe = value.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase()
+      const path = `brands/${safe}-${Date.now()}-${file.name}`
+      const { error: upErr } = await supabase.storage.from('store-assets').upload(path, file)
+      if (upErr) throw upErr
+      const { data: pub } = supabase.storage.from('store-assets').getPublicUrl(path)
+      const { error: dbErr } = await supabase.from('brands').update({ logo_url: pub.publicUrl }).eq('value', value)
+      if (dbErr) throw dbErr
+      toast.success(t.adminSaved)
+      reloadBrands()
+    } catch (e: any) {
+      toast.error(e.message || t.adminUploadFailed)
+    } finally {
+      setUploadingBrandLogo(null)
+    }
+  }
+
+  async function handleRemoveBrandLogo(value: string) {
+    const { error } = await supabase.from('brands').update({ logo_url: null }).eq('value', value)
+    if (error) { toast.error(error.message || t.adminSaveFailed); return }
+    reloadBrands()
+  }
+
   if (loading) {
     return (
       <div className="py-24 flex justify-center">
@@ -309,6 +385,103 @@ export default function AdminSettings() {
             disabled={savingCategory}
             className="p-2 border border-border hover:bg-muted cursor-pointer disabled:opacity-50 flex-shrink-0"
             aria-label={t.adminAddCategory}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* ----- Brands ----- */}
+      <div className="border border-border bg-card p-6 space-y-4">
+        <div>
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminBrands}</span>
+          <p className="text-[11px] text-muted-foreground mt-1.5">{t.adminBrandsHint}</p>
+        </div>
+        <div className="space-y-2">
+          {brands.map((b, i) => (
+            <div key={b.value} className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => handleMoveBrand(i, -1)}
+                  disabled={i === 0}
+                  className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                  aria-label={t.adminMoveUp}
+                >
+                  <ArrowUp className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMoveBrand(i, 1)}
+                  disabled={i === brands.length - 1}
+                  className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                  aria-label={t.adminMoveDown}
+                >
+                  <ArrowDown className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Logo preview + upload */}
+              <div className="w-14 h-11 shrink-0 border border-border bg-muted/40 flex items-center justify-center overflow-hidden relative">
+                {b.logo_url ? (
+                  <>
+                    <img src={b.logo_url} alt={b.name} className="w-full h-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveBrandLogo(b.value)}
+                      className="absolute top-0 end-0 bg-background/80 p-0.5 text-red-700 hover:bg-background cursor-pointer"
+                      aria-label={t.adminRemoveLogo}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{t.adminNoLogo}</span>
+                )}
+              </div>
+              <label className={`text-[11px] underline shrink-0 ${uploadingBrandLogo === b.value ? 'opacity-50' : 'cursor-pointer'}`}>
+                {uploadingBrandLogo === b.value ? t.adminUploading : t.adminUploadLogo}
+                <input
+                  type="file"
+                  accept="image/webp,image/png,image/*"
+                  className="hidden"
+                  disabled={uploadingBrandLogo === b.value}
+                  onChange={e => { handleUploadBrandLogo(b.value, e.target.files?.[0]); e.target.value = '' }}
+                />
+              </label>
+
+              <input
+                type="text"
+                defaultValue={b.name}
+                onBlur={e => e.target.value.trim() && e.target.value !== b.name && handleUpdateBrandName(b.value, e.target.value.trim())}
+                placeholder={t.adminBrandName}
+                className="flex-1 min-w-0 bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => handleDeleteBrand(b.value)}
+                className="p-2 text-red-700 hover:bg-muted cursor-pointer flex-shrink-0"
+                aria-label={t.adminDeleteBrand}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 pt-2 border-t border-border">
+          <input
+            type="text"
+            value={newBrandName}
+            onChange={e => setNewBrandName(e.target.value)}
+            placeholder={t.adminBrandName}
+            className="flex-1 min-w-0 bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none"
+          />
+          <button
+            type="button"
+            onClick={handleAddBrand}
+            disabled={savingBrand}
+            className="p-2 border border-border hover:bg-muted cursor-pointer disabled:opacity-50 flex-shrink-0"
+            aria-label={t.adminAddBrand}
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
