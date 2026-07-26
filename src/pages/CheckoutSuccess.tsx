@@ -8,6 +8,7 @@ import { useSeo } from '@/hooks/useSeo'
 export default function CheckoutSuccess() {
   const [params] = useSearchParams()
   const orderId = params.get('orderId') || ''
+  const isCod = params.get('cod') === '1'
   const { clearCart } = useCart()
   const cleared = useRef(false)
   const t = useT()
@@ -40,7 +41,7 @@ export default function CheckoutSuccess() {
         {t.successTitle}
       </h1>
       <p className="text-muted-foreground max-w-md font-light mb-2">
-        {t.successDesc}
+        {isCod ? t.successCodDesc : t.successDesc}
       </p>
       {orderId && (
         <p className="text-xs text-muted-foreground tracking-widest uppercase mb-10">

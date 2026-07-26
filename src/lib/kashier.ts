@@ -32,10 +32,16 @@ export type CreateOrderRequest = {
   couponCode?: string
   // Only sets the language of Kashier's hosted payment page.
   lang?: string
+  // 'cash' = Cash on Delivery; anything else (default) = pay online.
+  paymentMethod?: 'online' | 'cash'
 }
 
 export type CreateOrderResponse = {
   orderId: string
-  checkoutUrl: string
+  // null for Cash on Delivery (no Kashier redirect); a payments.kashier.io
+  // session URL for online payment.
+  checkoutUrl: string | null
   discountAmount: number
+  // true when the order was placed as Cash on Delivery.
+  cod?: boolean
 }

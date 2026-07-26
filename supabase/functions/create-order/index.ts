@@ -64,6 +64,7 @@ Deno.serve(async (req: Request) => {
       customer?: CustomerInput
       couponCode?: string
       lang?: string
+      paymentMethod?: string
     } | null
 
     const items = body?.items
@@ -71,6 +72,9 @@ Deno.serve(async (req: Request) => {
     const couponCode = typeof body?.couponCode === 'string' ? body.couponCode.trim() : ''
     // Only controls the language of Kashier's hosted payment page.
     const lang = body?.lang === 'ar' ? 'ar' : 'en'
+    // 'cash' = Cash on Delivery (no Kashier redirect, stock reserved now);
+    // anything else = pay online via Kashier (the default).
+    const isCod = body?.paymentMethod === 'cash'
 
     if (!Array.isArray(items) || items.length === 0) {
       return jsonResponse({ error: 'Cart is empty' }, 400)
@@ -131,7 +135,7 @@ Deno.serve(async (req: Request) => {
     const orderRef = `BOM-${Date.now()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
     const userId = getUserIdFromAuthHeader(req)
 
-    const { error: insertError } = await admin
+    const { data: inserted, error: insertError } = await admin
       .from('orders')
       .insert({
         user_id: userId,
@@ -142,14 +146,31 @@ Deno.serve(async (req: Request) => {
         total_amount: total,
         status: 'pending',
         payment_status: 'pending',
-        payment_method: 'kashier',
+        payment_method: isCod ? 'cash' : 'kashier',
         kashier_order_id: orderRef,
         items: orderItems,
         coupon_id: winningCouponId,
         discount_amount: discountAmount,
       })
+      .select('id')
+      .single()
 
-    if (insertError) throw insertError
+    if (insertError || !inserted) throw insertError ?? new Error('order insert returned no row')
+
+    // Cash on Delivery: no Kashier redirect. Reserve stock atomically now
+    // (place_cod_order can't oversell) and hand the customer straight to the
+    // thank-you page. The order is 'confirmed' + payment 'pending' until an
+    // admin marks the cash collected.
+    if (isCod) {
+      const { data: placed, error: codError } = await admin.rpc('place_cod_order', { p_order_id: inserted.id })
+      if (codError) throw codError
+      if (!placed) {
+        // place_cod_order already marked the order cancelled/failed (out of
+        // stock or a race). Tell the customer without leaking specifics.
+        return jsonResponse({ error: 'Sorry, one of your items just went out of stock. Please review your cart.' }, 409)
+      }
+      return jsonResponse({ orderId: orderRef, cod: true, checkoutUrl: null, discountAmount })
+    }
 
     const origin = resolveAllowedOrigin(req.headers.get('origin'))
 

@@ -63,6 +63,20 @@ export default function AdminOrders() {
     load()
   }
 
+  // Cash-on-Delivery orders reserve stock at placement but stay payment
+  // 'pending' until the cash is collected -- this is how the admin records
+  // that. Online orders are marked paid only by the Kashier webhook, never
+  // here.
+  async function markPaid(order: Order) {
+    const { error } = await supabase
+      .from('orders')
+      .update({ payment_status: 'paid' })
+      .eq('id', order.id)
+    if (error) { toast.error(error.message); return }
+    toast.success(t.adminMarkedPaid)
+    load()
+  }
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     let rows = filter === 'all' ? orders : orders.filter(o => o.status === filter)
@@ -188,15 +202,25 @@ export default function AdminOrders() {
                     </td>
                     <td className="px-4 py-4 font-medium">{formatPrice(Number(o.total_amount))}</td>
                     <td className="px-4 py-4">
-                      <span className={`text-xs px-2 py-0.5 border ${
-                        o.payment_status === 'paid'
-                          ? 'border-emerald-700/50 text-emerald-700'
-                          : o.payment_status === 'failed'
-                          ? 'border-red-700/50 text-red-700'
-                          : 'border-muted-foreground/40 text-muted-foreground'
-                      }`}>
-                        {statusLabel(o.payment_status)}
-                      </span>
+                      <div className="flex flex-col items-start gap-1.5">
+                        <span className={`text-xs px-2 py-0.5 border ${
+                          o.payment_status === 'paid'
+                            ? 'border-emerald-700/50 text-emerald-700'
+                            : o.payment_status === 'failed'
+                            ? 'border-red-700/50 text-red-700'
+                            : 'border-muted-foreground/40 text-muted-foreground'
+                        }`}>
+                          {o.payment_method === 'cash' ? `${statusLabel(o.payment_status)} · ${t.adminCod}` : statusLabel(o.payment_status)}
+                        </span>
+                        {isAdmin && o.payment_method === 'cash' && o.payment_status !== 'paid' && (
+                          <button
+                            onClick={e => { e.stopPropagation(); markPaid(o) }}
+                            className="text-[10px] tracking-wider uppercase border border-emerald-700/50 text-emerald-700 px-2 py-0.5 hover:bg-emerald-700 hover:text-white transition-colors cursor-pointer"
+                          >
+                            {t.adminMarkPaid}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
                       {isAdmin ? (

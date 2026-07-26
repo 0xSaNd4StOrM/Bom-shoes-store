@@ -6,7 +6,7 @@ import { useT, useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { supabase } from '@/lib/supabase'
 import type { CreateOrderRequest, CreateOrderResponse } from '@/lib/kashier'
-import { ArrowLeft, CreditCard, Lock } from 'lucide-react'
+import { ArrowLeft, CreditCard, Banknote } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 import { useSeo } from '@/hooks/useSeo'
@@ -33,6 +33,7 @@ export default function Checkout() {
   })
   const [discountAmount, setDiscountAmount] = useState(0)
   const [freeShipping, setFreeShipping] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('online')
 
   // Live preview of the coupon carried over from the Cart page, so the
   // summary/total shown here isn't missing the discount the whole time the
@@ -99,17 +100,27 @@ export default function Checkout() {
         },
         ...(couponCode ? { couponCode } : {}),
         lang,
+        paymentMethod,
       }
 
       const { data, error } = await supabase.functions.invoke<CreateOrderResponse>('create-order', { body })
 
       if (error) throw error
-      if (!data?.checkoutUrl) throw new Error('BOM Store: create-order did not return a checkout URL')
 
       // Reconcile with what the server actually applied (it re-validates the
       // coupon independently and may land on a different number than the
       // preview above, e.g. it just expired).
-      setDiscountAmount(data.discountAmount ?? 0)
+      setDiscountAmount(data?.discountAmount ?? 0)
+
+      // Cash on Delivery: the order is already placed + stock reserved, so go
+      // straight to the thank-you page (no Kashier redirect).
+      if (data?.cod) {
+        clearCart()
+        navigate(`/checkout/success?orderId=${encodeURIComponent(data.orderId)}&cod=1`)
+        return
+      }
+
+      if (!data?.checkoutUrl) throw new Error('BOM Store: create-order did not return a checkout URL')
 
       // Note: We do NOT clear cart here because the user might return from a failed payment.
       // The cart will be cleared on the success page.
@@ -176,25 +187,50 @@ export default function Checkout() {
               <p className="text-sm text-muted-foreground font-light mb-6">
                 {t.checkoutPaymentDesc}
               </p>
-              <div className="border border-border p-6 bg-muted/30">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center flex-shrink-0">
-                    <Lock className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-display text-lg mb-1">{t.checkoutKashierTitle}</h3>
-                    <p className="text-sm text-muted-foreground font-light leading-relaxed">
-                      {t.checkoutKashierDesc}
-                    </p>
-                    <div className="mt-4 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground tracking-wider">
-                      <span className="px-2 py-1 border border-border">VISA</span>
-                      <span className="px-2 py-1 border border-border">MASTERCARD</span>
-                      <span className="px-2 py-1 border border-border">MEEZA</span>
-                      <span className="px-2 py-1 border border-border">FAWRY</span>
-                      <span className="px-2 py-1 border border-border">VODAFONE CASH</span>
+
+              <div className="space-y-3">
+                {/* Pay online (Kashier) */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('online')}
+                  aria-pressed={paymentMethod === 'online'}
+                  className={`w-full text-start border p-5 transition-colors cursor-pointer ${paymentMethod === 'online' ? 'border-foreground bg-muted/30' : 'border-border hover:border-foreground/40'}`}
+                >
+                  <div className="flex items-start gap-4">
+                    <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${paymentMethod === 'online' ? 'border-foreground' : 'border-muted-foreground'}`}>
+                      {paymentMethod === 'online' && <span className="w-2 h-2 rounded-full bg-foreground" />}
+                    </span>
+                    <div className="flex-1">
+                      <h3 className="font-display text-lg mb-1 flex items-center gap-2"><CreditCard className="w-4 h-4" /> {t.checkoutPayOnline}</h3>
+                      <p className="text-sm text-muted-foreground font-light leading-relaxed">{t.checkoutKashierDesc}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground tracking-wider">
+                        <span className="px-2 py-1 border border-border">VISA</span>
+                        <span className="px-2 py-1 border border-border">MASTERCARD</span>
+                        <span className="px-2 py-1 border border-border">MEEZA</span>
+                        <span className="px-2 py-1 border border-border">FAWRY</span>
+                        <span className="px-2 py-1 border border-border">VODAFONE CASH</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </button>
+
+                {/* Cash on delivery */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('cash')}
+                  aria-pressed={paymentMethod === 'cash'}
+                  className={`w-full text-start border p-5 transition-colors cursor-pointer ${paymentMethod === 'cash' ? 'border-foreground bg-muted/30' : 'border-border hover:border-foreground/40'}`}
+                >
+                  <div className="flex items-start gap-4">
+                    <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${paymentMethod === 'cash' ? 'border-foreground' : 'border-muted-foreground'}`}>
+                      {paymentMethod === 'cash' && <span className="w-2 h-2 rounded-full bg-foreground" />}
+                    </span>
+                    <div className="flex-1">
+                      <h3 className="font-display text-lg mb-1 flex items-center gap-2"><Banknote className="w-4 h-4" /> {t.checkoutCashOnDelivery}</h3>
+                      <p className="text-sm text-muted-foreground font-light leading-relaxed">{t.checkoutCashDesc}</p>
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -203,7 +239,12 @@ export default function Checkout() {
               disabled={submitting}
               className="w-full bg-foreground text-background py-4 text-sm tracking-widest uppercase hover:bg-foreground/85 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
-              {submitting ? t.checkoutPreparing : (
+              {submitting ? t.checkoutPreparing : paymentMethod === 'cash' ? (
+                <>
+                  <Banknote className="w-4 h-4" />
+                  {t.checkoutPlaceOrder(formatPrice(grand))}
+                </>
+              ) : (
                 <>
                   <CreditCard className="w-4 h-4" />
                   {t.checkoutContinue(formatPrice(grand))}
