@@ -39,9 +39,10 @@ Deno.serve(async (req: Request) => {
 
     const apiKey = Deno.env.get('KASHIER_API_KEY')
     if (!apiKey) throw new Error('KASHIER_API_KEY not configured')
+    const secretKey = Deno.env.get('KASHIER_SECRET_KEY') ?? ''
 
     const signatureHeader = req.headers.get('x-kashier-signature')
-    if (!signatureHeader || !(await verifyKashierSignature(payload.data, signatureHeader, apiKey))) {
+    if (!signatureHeader || !(await verifyKashierSignature(payload.data, signatureHeader, [apiKey, secretKey]))) {
       console.error('kashier-webhook: rejected, invalid or missing x-kashier-signature')
       return new Response('invalid signature', { status: 401 })
     }
@@ -118,21 +119,55 @@ Deno.serve(async (req: Request) => {
   }
 })
 
-// Per developers.kashier.io/payment/webhook: sort data.signatureKeys
-// alphabetically, build "key1=value1&key2=value2..." from just those fields
-// of the data object, HMAC-SHA256 it with the Payment API key, and compare
-// to the x-kashier-signature header.
+// Verifies the x-kashier-signature header over the data.signatureKeys fields.
+// Kashier's own docs and SDK disagree on the exact construction (keys in
+// array order vs sorted; raw "k=v" vs URL-encoded querystring; and the v3
+// Payment Sessions flow vs the legacy hosted-payment flow may sign with the
+// Payment API key or the account Secret Key). Rather than hard-code one
+// guess, we try every legitimate construction and accept on the first match,
+// logging which one worked -- all candidates are HMAC-SHA256 over the same
+// signed fields, so accepting any correct construction is not a security
+// weakening. The matched variant is logged so this can be pinned down later.
 async function verifyKashierSignature(
   data: Record<string, unknown>,
   signatureHeader: string,
-  apiKey: string,
+  keys: string[],
 ): Promise<boolean> {
-  const keys = Array.isArray(data.signatureKeys) ? [...data.signatureKeys].sort() : []
-  if (keys.length === 0) return false
+  const sigKeys = Array.isArray(data.signatureKeys) ? (data.signatureKeys as string[]) : []
+  if (sigKeys.length === 0) return false
 
-  const queryString = keys.map(k => `${k}=${data[k]}`).join('&')
-  const expected = await hmacSha256Hex(queryString, apiKey)
-  return timingSafeEqual(expected, signatureHeader)
+  const orderings: Record<string, string[]> = {
+    arrayOrder: sigKeys,
+    sorted: [...sigKeys].sort(),
+  }
+  const builders: Record<string, (ks: string[]) => string> = {
+    raw: ks => ks.map(k => `${k}=${data[k]}`).join('&'),
+    encoded: ks => {
+      const p = new URLSearchParams()
+      for (const k of ks) p.append(k, String(data[k] ?? ''))
+      return p.toString()
+    },
+  }
+
+  for (const signKey of keys) {
+    if (!signKey) continue
+    for (const [ordName, ks] of Object.entries(orderings)) {
+      for (const [encName, build] of Object.entries(builders)) {
+        const expected = await hmacSha256Hex(build(ks), signKey)
+        if (timingSafeEqual(expected, signatureHeader)) {
+          console.log(`kashier-webhook: signature matched (order=${ordName}, enc=${encName}, key=${signKey === keys[0] ? 'api' : 'secret'})`)
+          return true
+        }
+      }
+    }
+  }
+
+  console.error('kashier-webhook: signature did not match any construction', JSON.stringify({
+    received: signatureHeader,
+    signatureKeys: sigKeys,
+    sample: builders.raw(orderings.sorted),
+  }))
+  return false
 }
 
 async function sendOrderConfirmationEmail(order: {
