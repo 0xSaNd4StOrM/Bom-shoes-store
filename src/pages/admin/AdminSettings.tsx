@@ -3,6 +3,10 @@ import { supabase, StoreSettings } from '@/lib/supabase'
 import { useCategories } from '@/contexts/CategoriesContext'
 import { useBrands } from '@/contexts/BrandsContext'
 import { compressImage } from '@/lib/compressImage'
+import {
+  DEFAULT_CHECKOUT_CONFIG, EGYPT_GOVERNORATES,
+  type CheckoutConfig, type ShippingRegion,
+} from '@/lib/checkoutConfig'
 import { useT } from '@/contexts/LanguageContext'
 import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -54,6 +58,10 @@ export default function AdminSettings() {
   const [savingBrand, setSavingBrand] = useState(false)
   // brand `value` whose logo is currently uploading (null = none)
   const [uploadingBrandLogo, setUploadingBrandLogo] = useState<string | null>(null)
+  const [checkoutConfig, setCheckoutConfig] = useState<CheckoutConfig>(DEFAULT_CHECKOUT_CONFIG)
+  const [savingCheckout, setSavingCheckout] = useState(false)
+  const [regions, setRegions] = useState<ShippingRegion[]>([])
+  const [savingShipping, setSavingShipping] = useState(false)
   const t = useT()
 
   async function load() {
@@ -68,9 +76,14 @@ export default function AdminSettings() {
     const { data: content } = await supabase
       .from('site_content')
       .select('key, value')
-      .in('key', ['whatsapp', 'contact'])
+      .in('key', ['whatsapp', 'contact', 'checkout_config', 'shipping'])
     for (const row of content || []) {
       if (row.key === 'whatsapp') setWhatsapp({ ...EMPTY_WHATSAPP, ...row.value })
+      if (row.key === 'checkout_config') setCheckoutConfig({ ...DEFAULT_CHECKOUT_CONFIG, ...row.value })
+      if (row.key === 'shipping') {
+        const rs = (row.value as { regions?: ShippingRegion[] })?.regions
+        setRegions(Array.isArray(rs) ? rs : [])
+      }
       if (row.key === 'contact') {
         const v = row.value as Record<string, string | null>
         setContact({
@@ -154,6 +167,44 @@ export default function AdminSettings() {
     } finally {
       setUploading(false)
     }
+  }
+
+  // ----- Payment methods shown at checkout -----
+  async function handleToggleCheckout(patch: Partial<CheckoutConfig>) {
+    const next = { ...checkoutConfig, ...patch }
+    // Guard: at least one method must stay enabled, else no one can check out.
+    if (!next.online_enabled && !next.cash_enabled) {
+      toast.error(t.adminAtLeastOnePayment)
+      return
+    }
+    setCheckoutConfig(next)
+    setSavingCheckout(true)
+    const { error } = await supabase.from('site_content').update({ value: next }).eq('key', 'checkout_config')
+    setSavingCheckout(false)
+    if (error) { toast.error(error.message || t.adminSaveFailed); return }
+    toast.success(t.adminSaved)
+  }
+
+  // ----- Shipping price per governorate -----
+  async function saveRegions(next: ShippingRegion[]) {
+    setRegions(next)
+    setSavingShipping(true)
+    const { error } = await supabase.from('site_content').update({ value: { regions: next } }).eq('key', 'shipping')
+    setSavingShipping(false)
+    if (error) { toast.error(error.message || t.adminSaveFailed); return }
+    toast.success(t.adminSaved)
+  }
+  function handleRegionPrice(code: string, price: number) {
+    saveRegions(regions.map(r => r.code === code ? { ...r, price: Math.max(0, price) } : r))
+  }
+  function handleRemoveRegion(code: string) {
+    saveRegions(regions.filter(r => r.code !== code))
+  }
+  function handleRestoreGovernorates() {
+    // Add any of the 27 that are missing (keeps existing prices for ones present).
+    const have = new Set(regions.map(r => r.code))
+    const merged = [...regions, ...EGYPT_GOVERNORATES.filter(g => !have.has(g.code))]
+    saveRegions(merged)
   }
 
   async function handleAddCategory() {
@@ -316,6 +367,82 @@ export default function AdminSettings() {
         <p className="text-[11px] text-muted-foreground mt-3">
           {t.adminCurrencyNote}
         </p>
+      </div>
+
+      {/* ----- Payment methods at checkout ----- */}
+      <div className="border border-border bg-card p-6 space-y-4">
+        <div>
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminPaymentMethods}</span>
+          <p className="text-[11px] text-muted-foreground mt-1.5">{t.adminPaymentMethodsHint}</p>
+        </div>
+        <label className="flex items-center justify-between gap-3 cursor-pointer">
+          <span className="text-sm">{t.checkoutPayOnline}</span>
+          <input
+            type="checkbox"
+            checked={checkoutConfig.online_enabled}
+            disabled={savingCheckout}
+            onChange={e => handleToggleCheckout({ online_enabled: e.target.checked })}
+            className="w-4 h-4 accent-foreground cursor-pointer"
+          />
+        </label>
+        <label className="flex items-center justify-between gap-3 cursor-pointer">
+          <span className="text-sm">{t.checkoutCashOnDelivery}</span>
+          <input
+            type="checkbox"
+            checked={checkoutConfig.cash_enabled}
+            disabled={savingCheckout}
+            onChange={e => handleToggleCheckout({ cash_enabled: e.target.checked })}
+            className="w-4 h-4 accent-foreground cursor-pointer"
+          />
+        </label>
+      </div>
+
+      {/* ----- Shipping price per governorate ----- */}
+      <div className="border border-border bg-card p-6 space-y-4">
+        <div>
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminShipping}</span>
+          <p className="text-[11px] text-muted-foreground mt-1.5">{t.adminShippingHint}</p>
+        </div>
+        <div className="space-y-2">
+          {regions.map(r => (
+            <div key={r.code} className="flex items-center gap-2">
+              <span className="flex-1 min-w-0 text-sm truncate">
+                {r.name_en} <span className="text-muted-foreground">· {r.name_ar}</span>
+              </span>
+              <input
+                type="number"
+                min={0}
+                defaultValue={r.price}
+                onBlur={e => {
+                  const v = Number(e.target.value)
+                  if (!Number.isNaN(v) && v !== r.price) handleRegionPrice(r.code, v)
+                }}
+                className="w-24 bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none"
+              />
+              <span className="text-[11px] text-muted-foreground w-8">EGP</span>
+              <button
+                type="button"
+                onClick={() => handleRemoveRegion(r.code)}
+                className="p-2 text-red-700 hover:bg-muted cursor-pointer flex-shrink-0"
+                aria-label={t.adminDelete}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+          {regions.length === 0 && (
+            <p className="text-[11px] text-muted-foreground py-2">{t.adminShippingEmpty}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleRestoreGovernorates}
+          disabled={savingShipping}
+          className="text-xs tracking-wide border border-border px-3 py-2 hover:bg-muted cursor-pointer disabled:opacity-50 inline-flex items-center gap-2"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          {t.adminRestoreGovernorates}
+        </button>
       </div>
 
       <div className="border border-border bg-card p-6 space-y-4">

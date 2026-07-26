@@ -6,6 +6,10 @@ import { useT, useLanguage } from '@/contexts/LanguageContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { supabase } from '@/lib/supabase'
 import type { CreateOrderRequest, CreateOrderResponse } from '@/lib/kashier'
+import {
+  DEFAULT_CHECKOUT_CONFIG, fetchCheckoutConfig, fetchShippingConfig, regionLabel,
+  type CheckoutConfig, type ShippingRegion,
+} from '@/lib/checkoutConfig'
 import { ArrowLeft, CreditCard, Banknote } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
@@ -28,12 +32,28 @@ export default function Checkout() {
     phone: '',
     address: '',
     city: '',
-    country: lang === 'ar' ? 'مصر' : 'Egypt',
+    regionCode: '',
     notes: '',
   })
   const [discountAmount, setDiscountAmount] = useState(0)
   const [freeShipping, setFreeShipping] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('online')
+  const [checkoutConfig, setCheckoutConfig] = useState<CheckoutConfig>(DEFAULT_CHECKOUT_CONFIG)
+  const [regions, setRegions] = useState<ShippingRegion[]>([])
+
+  // Which payment methods the admin has enabled (site_content.checkout_config).
+  useEffect(() => {
+    fetchCheckoutConfig().then(cfg => {
+      setCheckoutConfig(cfg)
+      // If online is off, default the selection to cash (and vice versa) so a
+      // disabled method is never the pre-selected one.
+      if (!cfg.online_enabled && cfg.cash_enabled) setPaymentMethod('cash')
+      else if (cfg.online_enabled && !cfg.cash_enabled) setPaymentMethod('online')
+    })
+    fetchShippingConfig().then(cfg => setRegions(cfg.regions))
+  }, [])
+
+  const selectedRegion = regions.find(r => r.code === form.regionCode) || null
 
   // Live preview of the coupon carried over from the Cart page, so the
   // summary/total shown here isn't missing the discount the whole time the
@@ -58,7 +78,10 @@ export default function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [couponCode])
 
-  const shipping = freeShipping ? 0 : totalPrice > 200 ? 0 : 15
+  // Shipping = the selected governorate's price (0 until one is picked). A
+  // coupon granting free shipping still zeroes it out. The server recomputes
+  // this authoritatively from regionCode in create-order.
+  const shipping = freeShipping ? 0 : selectedRegion?.price ?? 0
   const tax = totalPrice * 0.08
   const grand = totalPrice + shipping + tax - discountAmount
 
@@ -69,7 +92,9 @@ export default function Checkout() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (items.length === 0) return
-    if (!form.fullName || !form.email || !form.address || !form.city) {
+    // Phone is required (the courier calls the customer); email is optional.
+    // A governorate must be chosen so shipping can be priced.
+    if (!form.fullName || !form.phone || !form.address || !form.city || !form.regionCode) {
       toast.error(t.checkoutRequired)
       return
     }
@@ -91,13 +116,14 @@ export default function Checkout() {
         })),
         customer: {
           fullName: form.fullName,
-          email: form.email,
+          email: form.email || undefined,
           phone: form.phone,
           address: form.address,
           city: form.city,
-          country: form.country,
+          country: lang === 'ar' ? 'مصر' : 'Egypt',
           notes: form.notes,
         },
+        regionCode: form.regionCode,
         ...(couponCode ? { couponCode } : {}),
         lang,
         paymentMethod,
@@ -145,9 +171,9 @@ export default function Checkout() {
   }
 
   const fieldFullName = `${t.fieldFullName}${t.fieldRequired}`
-  const fieldEmail = `${t.fieldEmail}${t.fieldRequired}`
-  const fieldPhone = t.fieldPhone
-  const fieldCountry = `${t.fieldCountry}${t.fieldRequired}`
+  const fieldEmail = `${t.fieldEmail}${t.fieldOptional}`
+  const fieldPhone = `${t.fieldPhone}${t.fieldRequired}`
+  const fieldRegion = `${t.fieldRegion}${t.fieldRequired}`
   const fieldAddress = `${t.fieldAddress}${t.fieldRequired}`
   const fieldCity = `${t.fieldCity}${t.fieldRequired}`
   const fieldNotes = t.fieldNotes
@@ -170,9 +196,23 @@ export default function Checkout() {
               <h1 className="font-display text-3xl md:text-4xl mb-8">{t.checkoutShipping}</h1>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label={fieldFullName} value={form.fullName} onChange={v => setField('fullName', v)} required dir={lang === 'ar' ? 'rtl' : 'ltr'} />
-                <Field label={fieldEmail} type="email" value={form.email} onChange={v => setField('email', v)} required dir={lang === 'ar' ? 'rtl' : 'ltr'} />
-                <Field label={fieldPhone} type="tel" value={form.phone} onChange={v => setField('phone', v)} dir={lang === 'ar' ? 'rtl' : 'ltr'} />
-                <Field label={fieldCountry} value={form.country} onChange={v => setField('country', v)} required dir={lang === 'ar' ? 'rtl' : 'ltr'} />
+                <Field label={fieldPhone} type="tel" value={form.phone} onChange={v => setField('phone', v)} required dir={lang === 'ar' ? 'rtl' : 'ltr'} />
+                <Field label={fieldEmail} type="email" value={form.email} onChange={v => setField('email', v)} dir={lang === 'ar' ? 'rtl' : 'ltr'} />
+                <label className="block">
+                  <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{fieldRegion}</span>
+                  <select
+                    value={form.regionCode}
+                    onChange={e => setField('regionCode', e.target.value)}
+                    required
+                    dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                    className="w-full bg-transparent border-b border-foreground/30 focus:border-foreground outline-none py-2 text-sm transition-colors cursor-pointer"
+                  >
+                    <option value="" disabled>{t.checkoutSelectRegion}</option>
+                    {regions.map(r => (
+                      <option key={r.code} value={r.code}>{regionLabel(r, lang)}</option>
+                    ))}
+                  </select>
+                </label>
                 <div className="sm:col-span-2">
                   <Field label={fieldAddress} value={form.address} onChange={v => setField('address', v)} required dir={lang === 'ar' ? 'rtl' : 'ltr'} />
                 </div>
@@ -190,6 +230,7 @@ export default function Checkout() {
 
               <div className="space-y-3">
                 {/* Pay online (Kashier) */}
+                {checkoutConfig.online_enabled && (
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('online')}
@@ -213,8 +254,10 @@ export default function Checkout() {
                     </div>
                   </div>
                 </button>
+                )}
 
                 {/* Cash on delivery */}
+                {checkoutConfig.cash_enabled && (
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('cash')}
@@ -231,6 +274,7 @@ export default function Checkout() {
                     </div>
                   </div>
                 </button>
+                )}
               </div>
             </div>
 
@@ -282,7 +326,7 @@ export default function Checkout() {
                 {discountAmount > 0 && (
                   <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartDiscount}</dt><dd>−{formatPrice(discountAmount)}</dd></div>
                 )}
-                <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartShipping}</dt><dd>{shipping === 0 ? t.cartFree : formatPrice(shipping)}</dd></div>
+                <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartShipping}</dt><dd>{!selectedRegion && !freeShipping ? '—' : shipping === 0 ? t.cartFree : formatPrice(shipping)}</dd></div>
                 <div className="flex justify-between"><dt className="text-muted-foreground">{t.cartTax}</dt><dd>{formatPrice(tax)}</dd></div>
                 <div className="pt-3 border-t border-border flex justify-between items-baseline">
                   <dt>{t.cartTotal}</dt>

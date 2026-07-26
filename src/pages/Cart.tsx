@@ -77,10 +77,13 @@ export default function Cart() {
     setCouponInput('')
   }
 
-  const shipping = discount?.freeShipping ? 0 : totalPrice > 200 ? 0 : 15
+  // Shipping is priced per governorate at checkout (the customer hasn't chosen
+  // one yet here), so it's excluded from this running total and shown as
+  // "calculated at checkout". A free-shipping coupon is noted but doesn't
+  // change the number shown here.
   const tax = totalPrice * 0.08
   const hasDiscount = !!discount && discount.amount > 0
-  const grand = totalPrice + shipping + tax - (hasDiscount ? discount!.amount : 0)
+  const grand = totalPrice + tax - (hasDiscount ? discount!.amount : 0)
 
   if (items.length === 0) {
     return (
@@ -249,7 +252,7 @@ export default function Cart() {
                 )}
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">{t.cartShipping}</dt>
-                  <dd>{shipping === 0 ? t.cartFree : formatPrice(shipping)}</dd>
+                  <dd className="text-muted-foreground text-xs">{discount?.freeShipping ? t.cartFree : t.cartShipAtCheckout}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">{t.cartTax}</dt>

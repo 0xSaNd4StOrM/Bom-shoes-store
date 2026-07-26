@@ -30,16 +30,14 @@ type OrderItemInput = CartItemInput
 
 type CustomerInput = {
   fullName: string
-  email: string
-  phone?: string
+  email?: string
+  phone: string
   address: string
   city: string
   country: string
   notes?: string
 }
 
-const SHIPPING_FLAT = 15
-const FREE_SHIPPING_THRESHOLD = 200
 const TAX_RATE = 0.08
 // Kashier is an Egyptian gateway and the store settles in EGP: every payment is
 // always charged in EGP, regardless of the display currency an admin picks in
@@ -65,11 +63,13 @@ Deno.serve(async (req: Request) => {
       couponCode?: string
       lang?: string
       paymentMethod?: string
+      regionCode?: string
     } | null
 
     const items = body?.items
     const customer = body?.customer
     const couponCode = typeof body?.couponCode === 'string' ? body.couponCode.trim() : ''
+    const regionCode = typeof body?.regionCode === 'string' ? body.regionCode.trim() : ''
     // Only controls the language of Kashier's hosted payment page.
     const lang = body?.lang === 'ar' ? 'ar' : 'en'
     // 'cash' = Cash on Delivery (no Kashier redirect, stock reserved now);
@@ -79,7 +79,9 @@ Deno.serve(async (req: Request) => {
     if (!Array.isArray(items) || items.length === 0) {
       return jsonResponse({ error: 'Cart is empty' }, 400)
     }
-    if (!customer?.fullName || !customer?.email || !customer?.address || !customer?.city || !customer?.country) {
+    // Phone is required (courier calls the customer); email is optional. A
+    // region is required so shipping can be priced.
+    if (!customer?.fullName || !customer?.phone || !customer?.address || !customer?.city || !regionCode) {
       return jsonResponse({ error: 'Missing required customer details' }, 400)
     }
     for (const item of items) {
@@ -92,13 +94,35 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const admin = createClient(supabaseUrl, serviceRoleKey)
 
+    // Enforce the admin's enabled payment methods server-side -- a disabled
+    // method must be rejected even if the client somehow sends it.
+    const { data: cfgRow } = await admin
+      .from('site_content').select('value').eq('key', 'checkout_config').maybeSingle()
+    const cfg = (cfgRow?.value ?? {}) as { online_enabled?: boolean; cash_enabled?: boolean }
+    const onlineEnabled = cfg.online_enabled !== false
+    const cashEnabled = cfg.cash_enabled !== false
+    if ((isCod && !cashEnabled) || (!isCod && !onlineEnabled)) {
+      return jsonResponse({ error: 'That payment method is not available.' }, 400)
+    }
+
+    // Authoritative shipping: look the chosen region's price up from the
+    // shipping config (never trust a client-sent shipping amount). An unknown
+    // region code is rejected.
+    const { data: shipRow } = await admin
+      .from('site_content').select('value').eq('key', 'shipping').maybeSingle()
+    const shipRegions = ((shipRow?.value as { regions?: Array<{ code: string; price: number; name_en?: string }> } | null)?.regions) ?? []
+    const region = shipRegions.find(r => r.code === regionCode)
+    if (!region) {
+      return jsonResponse({ error: 'Please choose a valid delivery region.' }, 400)
+    }
+
     const pricing = await resolveCartPricing(admin, items)
     if (!pricing.ok) {
       return jsonResponse({ error: pricing.error }, 400)
     }
     const { items: orderItems, subtotal, productById } = pricing
 
-    const shipping = subtotal > FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT
+    const shipping = Math.max(0, Number(region.price) || 0)
     const tax = subtotal * TAX_RATE
 
     // Coupon/promotion/bundle resolution -- never trust anything the client
@@ -140,9 +164,9 @@ Deno.serve(async (req: Request) => {
       .insert({
         user_id: userId,
         customer_name: customer.fullName,
-        customer_email: customer.email,
+        customer_email: customer.email || null,
         customer_phone: customer.phone || null,
-        shipping_address: `${customer.address}, ${customer.city}, ${customer.country}${customer.notes ? ' | ' + customer.notes : ''}`,
+        shipping_address: `${customer.address}, ${customer.city}, ${region.name_en ?? regionCode}, ${customer.country}${customer.notes ? ' | ' + customer.notes : ''}`,
         total_amount: total,
         status: 'pending',
         payment_status: 'pending',

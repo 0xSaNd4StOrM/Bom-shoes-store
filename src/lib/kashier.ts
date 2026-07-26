@@ -18,8 +18,10 @@ export type CreateOrderItem = {
 
 export type CreateOrderCustomer = {
   fullName: string
-  email: string
-  phone?: string
+  // Optional: an Egyptian COD store reaches the customer by phone; email is a
+  // nice-to-have for the receipt only.
+  email?: string
+  phone: string
   address: string
   city: string
   country: string
@@ -30,6 +32,8 @@ export type CreateOrderRequest = {
   items: CreateOrderItem[]
   customer: CreateOrderCustomer
   couponCode?: string
+  // Governorate code -- the server prices shipping from this (site_content.shipping).
+  regionCode: string
   // Only sets the language of Kashier's hosted payment page.
   lang?: string
   // 'cash' = Cash on Delivery; anything else (default) = pay online.
