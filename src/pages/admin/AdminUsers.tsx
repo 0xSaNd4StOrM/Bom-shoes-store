@@ -48,7 +48,7 @@ export default function AdminUsers() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <p className="text-sm text-muted-foreground">{filtered.length} {filtered.length === 1 ? t.piece : t.pieces}</p>
+        <p className="text-sm text-muted-foreground">{t.adminUsersCount(filtered.length)}</p>
       </div>
 
       <div className="relative mb-4 max-w-sm">

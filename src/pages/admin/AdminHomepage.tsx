@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase, Testimonial } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
+import type { TranslationKey } from '@/lib/translations'
 import { Loader2, Plus, X, Edit2, Trash2, ArrowUp, ArrowDown, Star } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -18,17 +19,17 @@ const TRUST_ICONS = ['Truck', 'ShieldCheck', 'RotateCcw', 'Lock', 'Package', 'Aw
 type ProductOption = { id: string; name: string; slug: string }
 
 const TABS = [
-  { key: 'hero', label: 'Hero' },
-  { key: 'showcase', label: 'Showcase' },
-  { key: 'curated', label: 'Curated' },
-  { key: 'limited_drop', label: 'Limited Drop' },
-  { key: 'trust_badges', label: 'Trust Badges' },
-  { key: 'newsletter', label: 'Newsletter' },
-  { key: 'categories_strip', label: 'Brand Bar' },
-  { key: 'announcement', label: 'Announcement Bar' },
-  { key: 'footer_links', label: 'Footer Links' },
-  { key: 'testimonials', label: 'Testimonials' },
-] as const
+  { key: 'hero', labelKey: 'adminHeroTab' },
+  { key: 'showcase', labelKey: 'adminShowcaseTab' },
+  { key: 'curated', labelKey: 'adminCuratedTab' },
+  { key: 'limited_drop', labelKey: 'adminLimitedDropTab' },
+  { key: 'trust_badges', labelKey: 'adminTrustBadgesTab' },
+  { key: 'newsletter', labelKey: 'adminNewsletterTab' },
+  { key: 'categories_strip', labelKey: 'adminBrandBarTab' },
+  { key: 'announcement', labelKey: 'adminAnnouncementTab' },
+  { key: 'footer_links', labelKey: 'adminFooterLinksTab' },
+  { key: 'testimonials', labelKey: 'adminTestimonialsTab' },
+] as const satisfies readonly { key: string; labelKey: TranslationKey }[]
 type TabKey = typeof TABS[number]['key']
 
 export default function AdminHomepage() {
@@ -37,6 +38,7 @@ export default function AdminHomepage() {
   const [drafts, setDrafts] = useState<Record<string, any>>({})
   const [products, setProducts] = useState<ProductOption[]>([])
   const { isAdmin } = useAuth()
+  const t = useT()
 
   useEffect(() => {
     async function load() {
@@ -61,7 +63,7 @@ export default function AdminHomepage() {
   async function saveKey(key: SiteContentKey) {
     const { error } = await supabase.from('site_content').update({ value: drafts[key] || {} }).eq('key', key)
     if (error) { toast.error(error.message); return }
-    toast.success('Saved')
+    toast.success(t.adminSaved)
   }
 
   if (loading) {
@@ -85,7 +87,7 @@ export default function AdminHomepage() {
                 : 'border-border hover:bg-muted'
             }`}
           >
-            {item.label}
+            {t[item.labelKey]}
           </button>
         ))}
       </div>
@@ -166,6 +168,7 @@ function BilingualField({
 }
 
 function EnabledCheckbox({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled: boolean }) {
+  const t = useT()
   return (
     <label className="flex items-center gap-2 cursor-pointer">
       <input
@@ -175,13 +178,14 @@ function EnabledCheckbox({ checked, onChange, disabled }: { checked: boolean; on
         onChange={e => onChange(e.target.checked)}
         className="w-4 h-4 cursor-pointer disabled:opacity-40"
       />
-      <span className="text-sm">Show this section on the homepage</span>
+      <span className="text-sm">{t.adminShowSection}</span>
     </label>
   )
 }
 
 function SaveBar({ onSave, readOnly }: { onSave: () => void; readOnly: boolean }) {
   const [saving, setSaving] = useState(false)
+  const t = useT()
   return (
     <div className="pt-4 border-t border-border flex justify-end">
       <button
@@ -190,7 +194,7 @@ function SaveBar({ onSave, readOnly }: { onSave: () => void; readOnly: boolean }
         className="px-5 py-2.5 text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer flex items-center gap-2"
       >
         {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-        Save
+        {t.adminSaveBtn}
       </button>
     </div>
   )
@@ -203,17 +207,18 @@ function Card({ children }: { children: React.ReactNode }) {
 // ---------- Hero ----------
 
 function HeroTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const t = useT()
   return (
     <Card>
-      <BilingualField label="Eyebrow" valueEn={value.eyebrow_en || ''} valueAr={value.eyebrow_ar || ''} onEnChange={v => setField('eyebrow_en', v)} onArChange={v => setField('eyebrow_ar', v)} disabled={readOnly} />
-      <BilingualField label="Title, line 1" valueEn={value.title1_en || ''} valueAr={value.title1_ar || ''} onEnChange={v => setField('title1_en', v)} onArChange={v => setField('title1_ar', v)} disabled={readOnly} />
-      <BilingualField label="Title, line 2" valueEn={value.title2_en || ''} valueAr={value.title2_ar || ''} onEnChange={v => setField('title2_en', v)} onArChange={v => setField('title2_ar', v)} disabled={readOnly} />
-      <BilingualField label="Subtitle" valueEn={value.subtitle_en || ''} valueAr={value.subtitle_ar || ''} onEnChange={v => setField('subtitle_en', v)} onArChange={v => setField('subtitle_ar', v)} textarea disabled={readOnly} />
-      <BilingualField label="Primary CTA text" valueEn={value.cta1_text_en || ''} valueAr={value.cta1_text_ar || ''} onEnChange={v => setField('cta1_text_en', v)} onArChange={v => setField('cta1_text_ar', v)} disabled={readOnly} />
-      <Field label="Primary CTA link" value={value.cta1_link || ''} onChange={v => setField('cta1_link', v)} placeholder="/shop" disabled={readOnly} />
-      <BilingualField label="Secondary CTA text" valueEn={value.cta2_text_en || ''} valueAr={value.cta2_text_ar || ''} onEnChange={v => setField('cta2_text_en', v)} onArChange={v => setField('cta2_text_ar', v)} disabled={readOnly} />
-      <Field label="Secondary CTA link" value={value.cta2_link || ''} onChange={v => setField('cta2_link', v)} placeholder="/shop" disabled={readOnly} />
-      <BilingualField label="Scroll hint text" valueEn={value.scroll_text_en || ''} valueAr={value.scroll_text_ar || ''} onEnChange={v => setField('scroll_text_en', v)} onArChange={v => setField('scroll_text_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldEyebrow} valueEn={value.eyebrow_en || ''} valueAr={value.eyebrow_ar || ''} onEnChange={v => setField('eyebrow_en', v)} onArChange={v => setField('eyebrow_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldTitleLine1} valueEn={value.title1_en || ''} valueAr={value.title1_ar || ''} onEnChange={v => setField('title1_en', v)} onArChange={v => setField('title1_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldTitleLine2} valueEn={value.title2_en || ''} valueAr={value.title2_ar || ''} onEnChange={v => setField('title2_en', v)} onArChange={v => setField('title2_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldSubtitle} valueEn={value.subtitle_en || ''} valueAr={value.subtitle_ar || ''} onEnChange={v => setField('subtitle_en', v)} onArChange={v => setField('subtitle_ar', v)} textarea disabled={readOnly} />
+      <BilingualField label={t.adminFieldPrimaryCtaText} valueEn={value.cta1_text_en || ''} valueAr={value.cta1_text_ar || ''} onEnChange={v => setField('cta1_text_en', v)} onArChange={v => setField('cta1_text_ar', v)} disabled={readOnly} />
+      <Field label={t.adminFieldPrimaryCtaLink} value={value.cta1_link || ''} onChange={v => setField('cta1_link', v)} placeholder="/shop" disabled={readOnly} />
+      <BilingualField label={t.adminFieldSecondaryCtaText} valueEn={value.cta2_text_en || ''} valueAr={value.cta2_text_ar || ''} onEnChange={v => setField('cta2_text_en', v)} onArChange={v => setField('cta2_text_ar', v)} disabled={readOnly} />
+      <Field label={t.adminFieldSecondaryCtaLink} value={value.cta2_link || ''} onChange={v => setField('cta2_link', v)} placeholder="/shop" disabled={readOnly} />
+      <BilingualField label={t.adminFieldScrollHint} valueEn={value.scroll_text_en || ''} valueAr={value.scroll_text_ar || ''} onEnChange={v => setField('scroll_text_en', v)} onArChange={v => setField('scroll_text_ar', v)} disabled={readOnly} />
       <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>
@@ -223,12 +228,13 @@ function HeroTab({ value, setField, onSave, readOnly }: { value: any; setField: 
 // ---------- Curated ----------
 
 function CuratedTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const t = useT()
   return (
     <Card>
-      <BilingualField label="Eyebrow" valueEn={value.eyebrow_en || ''} valueAr={value.eyebrow_ar || ''} onEnChange={v => setField('eyebrow_en', v)} onArChange={v => setField('eyebrow_ar', v)} disabled={readOnly} />
-      <BilingualField label="Heading" valueEn={value.heading_en || ''} valueAr={value.heading_ar || ''} onEnChange={v => setField('heading_en', v)} onArChange={v => setField('heading_ar', v)} disabled={readOnly} />
-      <BilingualField label={'"View all" link text'} valueEn={value.view_all_en || ''} valueAr={value.view_all_ar || ''} onEnChange={v => setField('view_all_en', v)} onArChange={v => setField('view_all_ar', v)} disabled={readOnly} />
-      <Field label="Product limit" type="number" value={String(value.limit ?? 5)} onChange={v => setField('limit', Number(v) || 0)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldEyebrow} valueEn={value.eyebrow_en || ''} valueAr={value.eyebrow_ar || ''} onEnChange={v => setField('eyebrow_en', v)} onArChange={v => setField('eyebrow_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldHeading} valueEn={value.heading_en || ''} valueAr={value.heading_ar || ''} onEnChange={v => setField('heading_en', v)} onArChange={v => setField('heading_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldViewAllText} valueEn={value.view_all_en || ''} valueAr={value.view_all_ar || ''} onEnChange={v => setField('view_all_en', v)} onArChange={v => setField('view_all_ar', v)} disabled={readOnly} />
+      <Field label={t.adminFieldProductLimit} type="number" value={String(value.limit ?? 5)} onChange={v => setField('limit', Number(v) || 0)} disabled={readOnly} />
       <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>
@@ -238,31 +244,32 @@ function CuratedTab({ value, setField, onSave, readOnly }: { value: any; setFiel
 // ---------- Limited Drop ----------
 
 function LimitedDropTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const t = useT()
   return (
     <Card>
-      <BilingualField label="Eyebrow" valueEn={value.eyebrow_en || ''} valueAr={value.eyebrow_ar || ''} onEnChange={v => setField('eyebrow_en', v)} onArChange={v => setField('eyebrow_ar', v)} disabled={readOnly} />
-      <BilingualField label="Title, line 1" valueEn={value.title1_en || ''} valueAr={value.title1_ar || ''} onEnChange={v => setField('title1_en', v)} onArChange={v => setField('title1_ar', v)} disabled={readOnly} />
-      <BilingualField label="Title, line 2" valueEn={value.title2_en || ''} valueAr={value.title2_ar || ''} onEnChange={v => setField('title2_en', v)} onArChange={v => setField('title2_ar', v)} disabled={readOnly} />
-      <BilingualField label="Subtitle" valueEn={value.subtitle_en || ''} valueAr={value.subtitle_ar || ''} onEnChange={v => setField('subtitle_en', v)} onArChange={v => setField('subtitle_ar', v)} textarea disabled={readOnly} />
-      <BilingualField label="CTA text" valueEn={value.cta_text_en || ''} valueAr={value.cta_text_ar || ''} onEnChange={v => setField('cta_text_en', v)} onArChange={v => setField('cta_text_ar', v)} disabled={readOnly} />
-      <Field label="CTA link" value={value.cta_link || ''} onChange={v => setField('cta_link', v)} placeholder="/shop" disabled={readOnly} />
-      <Field label="Image URL" value={value.image_url || ''} onChange={v => setField('image_url', v)} placeholder="https://…" disabled={readOnly} />
+      <BilingualField label={t.adminFieldEyebrow} valueEn={value.eyebrow_en || ''} valueAr={value.eyebrow_ar || ''} onEnChange={v => setField('eyebrow_en', v)} onArChange={v => setField('eyebrow_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldTitleLine1} valueEn={value.title1_en || ''} valueAr={value.title1_ar || ''} onEnChange={v => setField('title1_en', v)} onArChange={v => setField('title1_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldTitleLine2} valueEn={value.title2_en || ''} valueAr={value.title2_ar || ''} onEnChange={v => setField('title2_en', v)} onArChange={v => setField('title2_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldSubtitle} valueEn={value.subtitle_en || ''} valueAr={value.subtitle_ar || ''} onEnChange={v => setField('subtitle_en', v)} onArChange={v => setField('subtitle_ar', v)} textarea disabled={readOnly} />
+      <BilingualField label={t.adminFieldCtaText} valueEn={value.cta_text_en || ''} valueAr={value.cta_text_ar || ''} onEnChange={v => setField('cta_text_en', v)} onArChange={v => setField('cta_text_ar', v)} disabled={readOnly} />
+      <Field label={t.adminFieldCtaLink} value={value.cta_link || ''} onChange={v => setField('cta_link', v)} placeholder="/shop" disabled={readOnly} />
+      <Field label={t.adminImageUrl} value={value.image_url || ''} onChange={v => setField('image_url', v)} placeholder="https://…" disabled={readOnly} />
       <div>
-        <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Countdown mode</label>
+        <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminCountdownMode}</label>
         <select
           value={value.countdown_mode || 'auto'}
           disabled={readOnly}
           onChange={e => setField('countdown_mode', e.target.value)}
           className="w-full bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none cursor-pointer disabled:opacity-40"
         >
-          <option value="auto">Auto (7 days from now)</option>
-          <option value="manual">Manual target date</option>
-          <option value="off">Off</option>
+          <option value="auto">{t.adminCountdownAuto}</option>
+          <option value="manual">{t.adminCountdownManual}</option>
+          <option value="off">{t.adminCountdownOff}</option>
         </select>
       </div>
       {value.countdown_mode === 'manual' && (
         <Field
-          label="Manual target"
+          label={t.adminManualTarget}
           type="datetime-local"
           value={value.manual_target ? value.manual_target.slice(0, 16) : ''}
           onChange={v => setField('manual_target', v ? new Date(v).toISOString() : null)}
@@ -280,6 +287,7 @@ function LimitedDropTab({ value, setField, onSave, readOnly }: { value: any; set
 function ShowcaseTab({
   value, setField, onSave, products, readOnly,
 }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; products: ProductOption[]; readOnly: boolean }) {
+  const t = useT()
   const ids: string[] = value.product_ids || []
   const [pick, setPick] = useState('')
   const byId = Object.fromEntries(products.map(p => [p.id, p]))
@@ -303,26 +311,26 @@ function ShowcaseTab({
 
   return (
     <Card>
-      <BilingualField label="Label" valueEn={value.label_en || ''} valueAr={value.label_ar || ''} onEnChange={v => setField('label_en', v)} onArChange={v => setField('label_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldLabel} valueEn={value.label_en || ''} valueAr={value.label_ar || ''} onEnChange={v => setField('label_en', v)} onArChange={v => setField('label_ar', v)} disabled={readOnly} />
 
       <div>
-        <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Products (in showcase order)</span>
+        <span className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminShowcaseProducts}</span>
         <div className="space-y-2 mb-3">
           {ids.map((id, idx) => (
             <div key={id + idx} className="flex items-center gap-2 border border-border px-3 py-2">
               <span className="flex-1 text-sm truncate">{byId[id]?.name || id}</span>
-              <button type="button" onClick={() => move(idx, -1)} disabled={readOnly || idx === 0} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Move up">
+              <button type="button" onClick={() => move(idx, -1)} disabled={readOnly || idx === 0} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label={t.adminMoveUp}>
                 <ArrowUp className="w-3.5 h-3.5" />
               </button>
-              <button type="button" onClick={() => move(idx, 1)} disabled={readOnly || idx === ids.length - 1} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Move down">
+              <button type="button" onClick={() => move(idx, 1)} disabled={readOnly || idx === ids.length - 1} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label={t.adminMoveDown}>
                 <ArrowDown className="w-3.5 h-3.5" />
               </button>
-              <button type="button" onClick={() => remove(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Remove">
+              <button type="button" onClick={() => remove(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label={t.adminRemoveRow}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
-          {ids.length === 0 && <p className="text-sm text-muted-foreground">No products in the showcase yet</p>}
+          {ids.length === 0 && <p className="text-sm text-muted-foreground">{t.adminNoShowcaseProducts}</p>}
         </div>
         {!readOnly && (
           <div className="flex gap-2">
@@ -331,13 +339,13 @@ function ShowcaseTab({
               onChange={e => setPick(e.target.value)}
               className="flex-1 bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none cursor-pointer"
             >
-              <option value="" disabled>Select a product to add</option>
+              <option value="" disabled>{t.adminSelectProductToAdd}</option>
               {available.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
             <button type="button" onClick={add} disabled={!pick} className="px-4 py-2 text-sm border border-border hover:bg-muted disabled:opacity-40 cursor-pointer flex items-center gap-1">
-              <Plus className="w-3.5 h-3.5" /> Add
+              <Plus className="w-3.5 h-3.5" /> {t.adminAdd}
             </button>
           </div>
         )}
@@ -352,6 +360,7 @@ function ShowcaseTab({
 // ---------- Trust Badges ----------
 
 function TrustBadgesTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const t = useT()
   const items: any[] = value.items || []
 
   function updateItem(idx: number, field: string, v: any) {
@@ -366,13 +375,13 @@ function TrustBadgesTab({ value, setField, onSave, readOnly }: { value: any; set
 
   return (
     <Card>
-      <BilingualField label="Eyebrow" valueEn={value.eyebrow_en || ''} valueAr={value.eyebrow_ar || ''} onEnChange={v => setField('eyebrow_en', v)} onArChange={v => setField('eyebrow_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldEyebrow} valueEn={value.eyebrow_en || ''} valueAr={value.eyebrow_ar || ''} onEnChange={v => setField('eyebrow_en', v)} onArChange={v => setField('eyebrow_ar', v)} disabled={readOnly} />
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <span className="block text-xs tracking-widest uppercase text-muted-foreground">Badges</span>
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminBadges}</span>
           {!readOnly && (
-            <button type="button" onClick={addItem} className="text-xs underline cursor-pointer">+ Add badge</button>
+            <button type="button" onClick={addItem} className="text-xs underline cursor-pointer">{t.adminAddBadge}</button>
           )}
         </div>
         <div className="space-y-4">
@@ -387,15 +396,15 @@ function TrustBadgesTab({ value, setField, onSave, readOnly }: { value: any; set
                 >
                   {TRUST_ICONS.map(icon => <option key={icon} value={icon}>{icon}</option>)}
                 </select>
-                <button type="button" onClick={() => removeItem(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Remove badge">
+                <button type="button" onClick={() => removeItem(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label={t.adminRemoveBadge}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <BilingualField label="Title" valueEn={it.title_en || ''} valueAr={it.title_ar || ''} onEnChange={v => updateItem(idx, 'title_en', v)} onArChange={v => updateItem(idx, 'title_ar', v)} disabled={readOnly} />
-              <BilingualField label="Description" valueEn={it.desc_en || ''} valueAr={it.desc_ar || ''} onEnChange={v => updateItem(idx, 'desc_en', v)} onArChange={v => updateItem(idx, 'desc_ar', v)} disabled={readOnly} />
+              <BilingualField label={t.adminFieldTitle} valueEn={it.title_en || ''} valueAr={it.title_ar || ''} onEnChange={v => updateItem(idx, 'title_en', v)} onArChange={v => updateItem(idx, 'title_ar', v)} disabled={readOnly} />
+              <BilingualField label={t.adminFieldDescription} valueEn={it.desc_en || ''} valueAr={it.desc_ar || ''} onEnChange={v => updateItem(idx, 'desc_en', v)} onArChange={v => updateItem(idx, 'desc_ar', v)} disabled={readOnly} />
             </div>
           ))}
-          {items.length === 0 && <p className="text-sm text-muted-foreground">No badges yet</p>}
+          {items.length === 0 && <p className="text-sm text-muted-foreground">{t.adminNoBadges}</p>}
         </div>
       </div>
 
@@ -408,6 +417,7 @@ function TrustBadgesTab({ value, setField, onSave, readOnly }: { value: any; set
 // ---------- Newsletter ----------
 
 function NewsletterTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const t = useT()
   const [count, setCount] = useState<number | null>(null)
 
   useEffect(() => {
@@ -419,11 +429,11 @@ function NewsletterTab({ value, setField, onSave, readOnly }: { value: any; setF
 
   return (
     <Card>
-      <BilingualField label="Title" valueEn={value.title_en || ''} valueAr={value.title_ar || ''} onEnChange={v => setField('title_en', v)} onArChange={v => setField('title_ar', v)} disabled={readOnly} />
-      <BilingualField label="Subtitle" valueEn={value.subtitle_en || ''} valueAr={value.subtitle_ar || ''} onEnChange={v => setField('subtitle_en', v)} onArChange={v => setField('subtitle_ar', v)} textarea disabled={readOnly} />
+      <BilingualField label={t.adminFieldTitle} valueEn={value.title_en || ''} valueAr={value.title_ar || ''} onEnChange={v => setField('title_en', v)} onArChange={v => setField('title_ar', v)} disabled={readOnly} />
+      <BilingualField label={t.adminFieldSubtitle} valueEn={value.subtitle_en || ''} valueAr={value.subtitle_ar || ''} onEnChange={v => setField('subtitle_en', v)} onArChange={v => setField('subtitle_ar', v)} textarea disabled={readOnly} />
       <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <p className="text-sm text-muted-foreground">
-        {count === null ? 'Loading subscriber count…' : `${count} ${count === 1 ? 'person has' : 'people have'} subscribed`}
+        {count === null ? t.adminSubscriberLoading : t.adminSubscriberCount(count)}
       </p>
       <SaveBar onSave={onSave} readOnly={readOnly} />
     </Card>
@@ -435,10 +445,11 @@ function NewsletterTab({ value, setField, onSave, readOnly }: { value: any; setF
 // avoid a migration); it now controls the homepage brand-logos bar.
 
 function BrandBarTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const t = useT()
   return (
     <Card>
       <p className="text-sm text-muted-foreground">
-        The brand bar shows your brands (as names, or logos once uploaded) below the hero. Its contents come from your Brands list -- use the toggle below to show or hide the whole bar on the homepage.
+        {t.adminBrandBarNote}
       </p>
       <EnabledCheckbox checked={value.enabled !== false} onChange={v => setField('enabled', v)} disabled={readOnly} />
       <SaveBar onSave={onSave} readOnly={readOnly} />
@@ -449,6 +460,7 @@ function BrandBarTab({ value, setField, onSave, readOnly }: { value: any; setFie
 // ---------- Announcement Bar ----------
 
 function AnnouncementTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const t = useT()
   const lines: any[] = value.lines || []
 
   function updateLine(idx: number, field: string, v: any) {
@@ -474,29 +486,29 @@ function AnnouncementTab({ value, setField, onSave, readOnly }: { value: any; se
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <span className="block text-xs tracking-widest uppercase text-muted-foreground">Lines</span>
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminLines}</span>
           {!readOnly && (
-            <button type="button" onClick={addLine} className="text-xs underline cursor-pointer">+ Add line</button>
+            <button type="button" onClick={addLine} className="text-xs underline cursor-pointer">{t.adminAddLine}</button>
           )}
         </div>
         <div className="space-y-3">
           {lines.map((l, idx) => (
             <div key={idx} className="border border-border p-4 space-y-3">
-              <BilingualField label={`Line ${idx + 1}`} valueEn={l.en || ''} valueAr={l.ar || ''} onEnChange={v => updateLine(idx, 'en', v)} onArChange={v => updateLine(idx, 'ar', v)} disabled={readOnly} />
+              <BilingualField label={t.adminLineN(idx + 1)} valueEn={l.en || ''} valueAr={l.ar || ''} onEnChange={v => updateLine(idx, 'en', v)} onArChange={v => updateLine(idx, 'ar', v)} disabled={readOnly} />
               <div className="flex items-center justify-end gap-1">
-                <button type="button" onClick={() => move(idx, -1)} disabled={readOnly || idx === 0} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Move up">
+                <button type="button" onClick={() => move(idx, -1)} disabled={readOnly || idx === 0} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label={t.adminMoveUp}>
                   <ArrowUp className="w-3.5 h-3.5" />
                 </button>
-                <button type="button" onClick={() => move(idx, 1)} disabled={readOnly || idx === lines.length - 1} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Move down">
+                <button type="button" onClick={() => move(idx, 1)} disabled={readOnly || idx === lines.length - 1} className="p-1 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label={t.adminMoveDown}>
                   <ArrowDown className="w-3.5 h-3.5" />
                 </button>
-                <button type="button" onClick={() => removeLine(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Remove line">
+                <button type="button" onClick={() => removeLine(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label={t.adminRemoveLine}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
           ))}
-          {lines.length === 0 && <p className="text-sm text-muted-foreground">No lines yet</p>}
+          {lines.length === 0 && <p className="text-sm text-muted-foreground">{t.adminNoLines}</p>}
         </div>
       </div>
 
@@ -508,6 +520,7 @@ function AnnouncementTab({ value, setField, onSave, readOnly }: { value: any; se
 // ---------- Footer Links ----------
 
 function FooterLinksTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const t = useT()
   const items: any[] = value.items || []
 
   function updateItem(idx: number, field: string, v: any) {
@@ -524,25 +537,25 @@ function FooterLinksTab({ value, setField, onSave, readOnly }: { value: any; set
     <Card>
       <div>
         <div className="flex items-center justify-between mb-3">
-          <span className="block text-xs tracking-widest uppercase text-muted-foreground">Links</span>
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminLinks}</span>
           {!readOnly && (
-            <button type="button" onClick={addItem} className="text-xs underline cursor-pointer">+ Add link</button>
+            <button type="button" onClick={addItem} className="text-xs underline cursor-pointer">{t.adminAddLink}</button>
           )}
         </div>
         <div className="space-y-4">
           {items.map((it, idx) => (
             <div key={idx} className="border border-border p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Link {idx + 1}</span>
-                <button type="button" onClick={() => removeItem(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label="Remove link">
+                <span className="text-xs text-muted-foreground">{t.adminLinkN(idx + 1)}</span>
+                <button type="button" onClick={() => removeItem(idx)} disabled={readOnly} className="p-1 text-red-700 hover:bg-muted disabled:opacity-30 cursor-pointer" aria-label={t.adminRemoveLink}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <BilingualField label="Label" valueEn={it.label_en || ''} valueAr={it.label_ar || ''} onEnChange={v => updateItem(idx, 'label_en', v)} onArChange={v => updateItem(idx, 'label_ar', v)} disabled={readOnly} />
-              <Field label="URL" value={it.url || ''} onChange={v => updateItem(idx, 'url', v)} placeholder="/pages/about" disabled={readOnly} />
+              <BilingualField label={t.adminFieldLabel} valueEn={it.label_en || ''} valueAr={it.label_ar || ''} onEnChange={v => updateItem(idx, 'label_en', v)} onArChange={v => updateItem(idx, 'label_ar', v)} disabled={readOnly} />
+              <Field label={t.adminFieldUrl} value={it.url || ''} onChange={v => updateItem(idx, 'url', v)} placeholder="/pages/about" disabled={readOnly} />
             </div>
           ))}
-          {items.length === 0 && <p className="text-sm text-muted-foreground">No links yet</p>}
+          {items.length === 0 && <p className="text-sm text-muted-foreground">{t.adminNoLinks}</p>}
         </div>
       </div>
 
@@ -600,8 +613,8 @@ function TestimonialsTab() {
 
   async function handleSave() {
     if (!editing) return
-    if (!editing.author_name?.trim()) { toast.error('Author name is required'); return }
-    if (!editing.quote_en?.trim() || !editing.quote_ar?.trim()) { toast.error('Quote is required in both languages'); return }
+    if (!editing.author_name?.trim()) { toast.error(t.adminAuthorNameRequired); return }
+    if (!editing.quote_en?.trim() || !editing.quote_ar?.trim()) { toast.error(t.adminQuoteRequired); return }
     setSaving(true)
     try {
       const payload = {
@@ -623,35 +636,35 @@ function TestimonialsTab() {
         if (error) throw error
       }
 
-      toast.success(editing.id ? 'Testimonial updated' : 'Testimonial created')
+      toast.success(editing.id ? t.adminTestimonialUpdated : t.adminTestimonialCreated)
       setEditing(null)
       load()
     } catch (e: any) {
-      toast.error(e.message || 'Something went wrong')
+      toast.error(e.message || t.adminGenericError)
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete(r: Testimonial) {
-    if (!confirm(`Delete testimonial from "${r.author_name}"?`)) return
+    if (!confirm(t.adminTestimonialDeleteConfirm(r.author_name))) return
     const { error } = await supabase.from('testimonials').delete().eq('id', r.id)
     if (error) { toast.error(error.message); return }
-    toast.success('Testimonial deleted')
+    toast.success(t.adminTestimonialDeleted)
     load()
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <p className="text-sm text-muted-foreground">{rows.length} testimonial{rows.length === 1 ? '' : 's'}</p>
+        <p className="text-sm text-muted-foreground">{t.adminTestimonialsCount(rows.length)}</p>
         {isAdmin && (
           <button
             onClick={openNew}
             className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm tracking-wider hover:bg-primary/90 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Add testimonial
+            {t.adminAddTestimonial}
           </button>
         )}
       </div>
@@ -666,12 +679,12 @@ function TestimonialsTab() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs tracking-widest uppercase text-muted-foreground">
                 <tr>
-                  <th className="text-start px-4 py-3">Order</th>
-                  <th className="text-start px-4 py-3">Author</th>
-                  <th className="text-start px-4 py-3">Quote</th>
-                  <th className="text-start px-4 py-3">Rating</th>
-                  <th className="text-start px-4 py-3">Active</th>
-                  <th className="text-end px-4 py-3">Actions</th>
+                  <th className="text-start px-4 py-3">{t.adminColOrder}</th>
+                  <th className="text-start px-4 py-3">{t.adminColAuthor}</th>
+                  <th className="text-start px-4 py-3">{t.adminColQuote}</th>
+                  <th className="text-start px-4 py-3">{t.adminColRating}</th>
+                  <th className="text-start px-4 py-3">{t.adminColActive}</th>
+                  <th className="text-end px-4 py-3">{t.adminActions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -679,10 +692,10 @@ function TestimonialsTab() {
                   <tr key={r.id} className="border-t border-border">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => move(r, -1)} disabled={idx === 0} className="p-1 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer" aria-label="Move up">
+                        <button onClick={() => move(r, -1)} disabled={idx === 0} className="p-1 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer" aria-label={t.adminMoveUp}>
                           <ArrowUp className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => move(r, 1)} disabled={idx === rows.length - 1} className="p-1 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer" aria-label="Move down">
+                        <button onClick={() => move(r, 1)} disabled={idx === rows.length - 1} className="p-1 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer" aria-label={t.adminMoveDown}>
                           <ArrowDown className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -705,13 +718,13 @@ function TestimonialsTab() {
                       ) : t.dash}
                     </td>
                     <td className="px-4 py-3">
-                      <input type="checkbox" checked={r.active} onChange={() => toggleActive(r)} className="w-4 h-4 cursor-pointer" aria-label="Active" />
+                      <input type="checkbox" checked={r.active} onChange={() => toggleActive(r)} className="w-4 h-4 cursor-pointer" aria-label={t.adminColActive} />
                     </td>
                     <td className="px-4 py-3 text-end">
-                      <button onClick={() => openEdit(r)} className="p-1.5 hover:bg-muted cursor-pointer" aria-label="Edit testimonial">
+                      <button onClick={() => openEdit(r)} className="p-1.5 hover:bg-muted cursor-pointer" aria-label={t.adminEditTestimonial}>
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDelete(r)} className="p-1.5 hover:bg-muted text-red-700 cursor-pointer" aria-label="Delete testimonial">
+                      <button onClick={() => handleDelete(r)} className="p-1.5 hover:bg-muted text-red-700 cursor-pointer" aria-label={t.adminTestimonialDeleted}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
@@ -719,7 +732,7 @@ function TestimonialsTab() {
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No testimonials yet</td>
+                    <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">{t.adminNoTestimonials}</td>
                   </tr>
                 )}
               </tbody>
@@ -732,18 +745,18 @@ function TestimonialsTab() {
         <div className="fixed inset-0 z-50 bg-foreground/50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-background w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-background z-10">
-              <h2 className="font-display text-2xl">{editing.id ? 'Edit testimonial' : 'New testimonial'}</h2>
-              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer" aria-label="Close">
+              <h2 className="font-display text-2xl">{editing.id ? t.adminEditTestimonial : t.adminNewTestimonial}</h2>
+              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer" aria-label={t.adminClose}>
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Author name" value={editing.author_name || ''} onChange={v => setEditing({ ...editing, author_name: v })} />
-                <Field label="Author title" value={editing.author_title || ''} onChange={v => setEditing({ ...editing, author_title: v })} placeholder="e.g. Verified buyer" />
+                <Field label={t.adminAuthorName} value={editing.author_name || ''} onChange={v => setEditing({ ...editing, author_name: v })} />
+                <Field label={t.adminAuthorTitle} value={editing.author_title || ''} onChange={v => setEditing({ ...editing, author_title: v })} placeholder={t.adminAuthorTitlePlaceholder} />
               </div>
               <div>
-                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Quote (EN)</label>
+                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminQuoteEn}</label>
                 <textarea
                   value={editing.quote_en || ''}
                   onChange={e => setEditing({ ...editing, quote_en: e.target.value })}
@@ -752,7 +765,7 @@ function TestimonialsTab() {
                 />
               </div>
               <div>
-                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Quote (AR)</label>
+                <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminQuoteAr}</label>
                 <textarea
                   dir="rtl"
                   value={editing.quote_ar || ''}
@@ -763,15 +776,15 @@ function TestimonialsTab() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <Field
-                  label="Rating (1-5)"
+                  label={t.adminRating15}
                   type="number"
                   value={editing.rating != null ? String(editing.rating) : ''}
                   onChange={v => setEditing({ ...editing, rating: v === '' ? null : Math.max(1, Math.min(5, Number(v))) })}
                 />
-                <Field label="Avatar URL" value={editing.avatar_url || ''} onChange={v => setEditing({ ...editing, avatar_url: v })} placeholder="https://…" />
+                <Field label={t.adminAvatarUrl} value={editing.avatar_url || ''} onChange={v => setEditing({ ...editing, avatar_url: v })} placeholder="https://…" />
               </div>
               <div className="grid grid-cols-2 gap-4 items-end">
-                <Field label="Position" type="number" value={String(editing.position ?? 0)} onChange={v => setEditing({ ...editing, position: Number(v) })} />
+                <Field label={t.adminPosition} type="number" value={String(editing.position ?? 0)} onChange={v => setEditing({ ...editing, position: Number(v) })} />
                 <label className="flex items-center gap-2 cursor-pointer pb-2.5">
                   <input
                     type="checkbox"
@@ -779,13 +792,13 @@ function TestimonialsTab() {
                     onChange={e => setEditing({ ...editing, active: e.target.checked })}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm">Active</span>
+                  <span className="text-sm">{t.adminActiveLabel}</span>
                 </label>
               </div>
             </div>
             <div className="p-6 border-t border-border flex items-center justify-end gap-3 sticky bottom-0 bg-background">
               <button onClick={() => setEditing(null)} className="px-5 py-2.5 text-sm border border-border hover:bg-muted cursor-pointer">
-                Cancel
+                {t.adminCancel}
               </button>
               <button
                 onClick={handleSave}
@@ -793,7 +806,7 @@ function TestimonialsTab() {
                 className="px-5 py-2.5 text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer flex items-center gap-2"
               >
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {editing.id ? 'Save' : 'Create'}
+                {editing.id ? t.adminSaveBtn : t.adminCreateBtn}
               </button>
             </div>
           </div>

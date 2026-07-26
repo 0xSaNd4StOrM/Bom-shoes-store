@@ -108,7 +108,7 @@ export default function AdminOrders() {
             </button>
           ))}
         </div>
-        <p className="text-sm text-muted-foreground">{filtered.length} {filtered.length === 1 ? t.piece : t.pieces}</p>
+        <p className="text-sm text-muted-foreground">{t.adminOrdersCount(filtered.length)}</p>
       </div>
 
       <div className="relative mb-4 max-w-sm">

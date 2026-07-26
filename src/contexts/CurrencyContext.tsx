@@ -21,7 +21,7 @@ function symbolFor(code: string, lang: string): { symbol: string; side: 'prefix'
     case 'USD': return { symbol: '$', side: 'prefix' }
     case 'EUR': return { symbol: '€', side: 'prefix' }
     case 'GBP': return { symbol: '£', side: 'prefix' }
-    case 'EGP': return lang === 'ar' ? { symbol: 'ج.م', side: 'suffix' } : { symbol: 'E£', side: 'prefix' }
+    case 'EGP': return { symbol: 'EGP', side: 'suffix' }
     case 'SAR': return { symbol: lang === 'ar' ? 'ر.س' : 'SAR', side: 'suffix' }
     case 'AED': return { symbol: lang === 'ar' ? 'د.إ' : 'AED', side: 'suffix' }
     default: return null

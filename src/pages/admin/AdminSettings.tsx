@@ -177,6 +177,7 @@ export default function AdminSettings() {
   }
 
   async function handleDeleteCategory(value: string) {
+    if (!confirm(t.adminDeleteConfirm(value))) return
     // ponytail: a simple existence check, not a foreign key -- products.category
     // has always been free text, so this is the same protection an FK ON DELETE
     // RESTRICT would give without a schema change.

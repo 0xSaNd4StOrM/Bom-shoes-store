@@ -350,6 +350,10 @@ export default function AdminProducts() {
         <div className="py-24 flex justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
+      ) : visibleProducts.length === 0 ? (
+        <div className="border border-border bg-card p-12 text-center">
+          <p className="text-muted-foreground">{t.adminNoProducts}</p>
+        </div>
       ) : (
         <div className="border border-border bg-card overflow-hidden">
           <div className="overflow-x-auto">
@@ -433,7 +437,7 @@ export default function AdminProducts() {
               <h2 className="font-display text-2xl">
                 {editing.id ? t.adminEditProduct : t.adminNewProduct}
               </h2>
-              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer" aria-label="Close">
+              <button onClick={() => setEditing(null)} className="p-2 cursor-pointer" aria-label={t.adminClose}>
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -466,13 +470,13 @@ export default function AdminProducts() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">Brand</label>
+                  <label className="block text-xs tracking-widest uppercase text-muted-foreground mb-2">{t.adminBrandField}</label>
                   <select
                     value={editing.brand ?? ''}
                     onChange={e => setEditing({ ...editing, brand: e.target.value || null })}
                     className="w-full bg-transparent border border-border px-3 py-2 text-sm focus:border-foreground outline-none cursor-pointer"
                   >
-                    <option value="">— None (BOM Store own) —</option>
+                    <option value="">{t.adminBrandNoneOption}</option>
                     {brands.map(b => (
                       <option key={b.value} value={b.value}>{b.name}</option>
                     ))}
@@ -480,14 +484,14 @@ export default function AdminProducts() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Field label={`Cost Price (${currency})`} type="number" value={costPrice != null ? String(costPrice) : ''} onChange={v => setCostPrice(v === '' ? null : Number(v))} />
-                <Field label={`Sale Price (${currency})`} type="number" value={editing.sale_price != null ? String(editing.sale_price) : ''} onChange={v => setEditing({ ...editing, sale_price: v === '' ? null : Number(v) })} />
+                <Field label={`${t.adminCostPrice} (${currency})`} type="number" value={costPrice != null ? String(costPrice) : ''} onChange={v => setCostPrice(v === '' ? null : Number(v))} />
+                <Field label={`${t.adminSalePrice} (${currency})`} type="number" value={editing.sale_price != null ? String(editing.sale_price) : ''} onChange={v => setEditing({ ...editing, sale_price: v === '' ? null : Number(v) })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Materials" value={editing.materials || ''} onChange={v => setEditing({ ...editing, materials: v })} />
-                <Field label="Weight (grams)" type="number" value={editing.weight_grams != null ? String(editing.weight_grams) : ''} onChange={v => setEditing({ ...editing, weight_grams: v === '' ? null : Number(v) })} />
+                <Field label={t.adminMaterials} value={editing.materials || ''} onChange={v => setEditing({ ...editing, materials: v })} />
+                <Field label={t.adminWeightGrams} type="number" value={editing.weight_grams != null ? String(editing.weight_grams) : ''} onChange={v => setEditing({ ...editing, weight_grams: v === '' ? null : Number(v) })} />
               </div>
-              <Field label="Tags (comma separated)" value={(editing.tags || []).join(', ')} onChange={v => setEditing({ ...editing, tags: v.split(',').map(s => s.trim()).filter(Boolean) })} />
+              <Field label={t.adminTagsCsv} value={(editing.tags || []).join(', ')} onChange={v => setEditing({ ...editing, tags: v.split(',').map(s => s.trim()).filter(Boolean) })} />
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -501,10 +505,10 @@ export default function AdminProducts() {
               {/* --- Photo gallery --- */}
               <div className="pt-2 border-t border-border">
                 <div className="flex items-center justify-between mb-2 mt-4">
-                  <span className="block text-xs tracking-widest uppercase text-muted-foreground">Photos</span>
+                  <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminPhotos}</span>
                   {editing.id ? (
                     <label className={`text-xs underline ${uploading ? 'opacity-50' : 'cursor-pointer'}`}>
-                      {uploading ? 'Uploading…' : '+ Upload images'}
+                      {uploading ? t.adminUploading : t.adminUploadImages}
                       <input
                         type="file"
                         accept="image/*"
@@ -515,7 +519,7 @@ export default function AdminProducts() {
                       />
                     </label>
                   ) : (
-                    <span className="text-xs text-muted-foreground">Save the product first to add photos</span>
+                    <span className="text-xs text-muted-foreground">{t.adminSaveFirstForPhotos}</span>
                   )}
                 </div>
                 {images.length > 0 && (
@@ -528,7 +532,7 @@ export default function AdminProducts() {
                         onDragOver={e => e.preventDefault()}
                         onDrop={() => handleDropImage(idx)}
                         className="relative w-20 h-20 border border-border cursor-move group flex-shrink-0"
-                        title="Drag to reorder"
+                        title={t.adminDragReorder}
                       >
                         <img src={img.url} alt="" className="w-full h-full object-cover" />
                         <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-foreground/70 px-1 py-0.5">
@@ -536,8 +540,8 @@ export default function AdminProducts() {
                             type="button"
                             onClick={() => handleSetFeatured(img)}
                             className="cursor-pointer"
-                            aria-label="Set featured"
-                            title="Set featured"
+                            aria-label={t.adminSetFeatured}
+                            title={t.adminSetFeatured}
                           >
                             <Star className={`w-3.5 h-3.5 ${img.is_featured ? 'fill-yellow-400 text-yellow-400' : 'text-background'}`} />
                           </button>
@@ -545,8 +549,8 @@ export default function AdminProducts() {
                             type="button"
                             onClick={() => handleDeleteImage(img)}
                             className="cursor-pointer"
-                            aria-label="Delete image"
-                            title="Delete"
+                            aria-label={t.adminDeleteImage}
+                            title={t.adminDeleteImage}
                           >
                             <Trash2 className="w-3.5 h-3.5 text-background" />
                           </button>
@@ -560,13 +564,13 @@ export default function AdminProducts() {
               {/* --- Variants --- */}
               <div className="pt-2 border-t border-border">
                 <div className="flex items-center justify-between mb-2 mt-4">
-                  <span className="block text-xs tracking-widest uppercase text-muted-foreground">Variants</span>
-                  <button type="button" onClick={addVariantRow} className="text-xs underline cursor-pointer">+ Add row</button>
+                  <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminVariants}</span>
+                  <button type="button" onClick={addVariantRow} className="text-xs underline cursor-pointer">{t.adminAddRow}</button>
                 </div>
                 <div className="overflow-x-auto">
                   <div className="min-w-[640px] space-y-2">
                     <div className="grid grid-cols-[1fr_1fr_4.5rem_1fr_1fr_6rem_1.5rem] gap-2 text-[10px] tracking-widest uppercase text-muted-foreground">
-                      <span>Size</span><span>Color</span><span>Stock</span><span>SKU</span><span>Barcode</span><span>Price override</span><span />
+                      <span>{t.adminColSize}</span><span>{t.adminColColor}</span><span>{t.adminColStock}</span><span>{t.adminColSku}</span><span>{t.adminColBarcode}</span><span>{t.adminColPriceOverride}</span><span />
                     </div>
                     {variantRows.map(row => (
                       <div key={row._key} className="grid grid-cols-[1fr_1fr_4.5rem_1fr_1fr_6rem_1.5rem] gap-2 items-center">
@@ -576,7 +580,7 @@ export default function AdminProducts() {
                         <input value={row.sku} onChange={e => updateVariantRow(row._key, 'sku', e.target.value)} className="w-full bg-transparent border border-border px-2 py-1.5 text-sm focus:border-foreground outline-none" />
                         <input value={row.barcode} onChange={e => updateVariantRow(row._key, 'barcode', e.target.value)} className="w-full bg-transparent border border-border px-2 py-1.5 text-sm focus:border-foreground outline-none" />
                         <input type="number" value={row.price_override} onChange={e => updateVariantRow(row._key, 'price_override', e.target.value)} className="w-full bg-transparent border border-border px-2 py-1.5 text-sm focus:border-foreground outline-none" />
-                        <button type="button" onClick={() => removeVariantRow(row._key)} className="p-1 text-red-700 cursor-pointer" aria-label="Remove row">
+                        <button type="button" onClick={() => removeVariantRow(row._key)} className="p-1 text-red-700 cursor-pointer" aria-label={t.adminRemoveRow}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
