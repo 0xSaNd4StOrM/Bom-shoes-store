@@ -17,6 +17,7 @@ type NewsletterContent = { title_en: string; title_ar: string; subtitle_en: stri
 type AnnouncementContent = { enabled?: boolean; lines?: { en: string; ar: string }[] }
 type FooterLink = { label_en: string; label_ar: string; url: string }
 type FooterLinksContent = { items?: FooterLink[] }
+type SiteVisibilityContent = { brands_page_enabled?: boolean }
 type ContactContent = {
   email: string | null
   phone: string | null
@@ -64,6 +65,7 @@ export default function Layout() {
   const [contactContent, setContactContent] = useState<ContactContent | null>(null)
   const [announcement, setAnnouncement] = useState<AnnouncementContent | null>(null)
   const [footerLinks, setFooterLinks] = useState<FooterLinksContent | null>(null)
+  const [siteVisibility, setSiteVisibility] = useState<SiteVisibilityContent | null>(null)
   const [subscribeEmail, setSubscribeEmail] = useState('')
   const [subscribing, setSubscribing] = useState(false)
   const navigate = useNavigate()
@@ -111,7 +113,7 @@ export default function Layout() {
     supabase
       .from('site_content')
       .select('key, value')
-      .in('key', ['newsletter', 'contact', 'announcement', 'footer_links'])
+      .in('key', ['newsletter', 'contact', 'announcement', 'footer_links', 'site_visibility'])
       .then(
         ({ data }) => {
           for (const row of data || []) {
@@ -119,6 +121,7 @@ export default function Layout() {
             if (row.key === 'contact') setContactContent(row.value as ContactContent)
             if (row.key === 'announcement') setAnnouncement(row.value as AnnouncementContent)
             if (row.key === 'footer_links') setFooterLinks(row.value as FooterLinksContent)
+            if (row.key === 'site_visibility') setSiteVisibility(row.value as SiteVisibilityContent)
           }
         },
         () => { /* keep footer/ticker fallbacks */ }
@@ -223,9 +226,10 @@ export default function Layout() {
   // Kept deliberately short (Shop / Brands / Sale) rather than listing every
   // category here too -- Shop already has its own category filter chips.
   // `sale` renders in the terracotta accent, matching the reference design.
+  const brandsPageEnabled = siteVisibility?.brands_page_enabled !== false
   const nav = [
     { to: '/shop', label: t.navShop },
-    { to: '/brands', label: t.navBrands },
+    ...(brandsPageEnabled ? [{ to: '/brands', label: t.navBrands }] : []),
     { to: '/shop?sale=1', label: t.navSale, sale: true },
   ]
 
@@ -679,6 +683,8 @@ export default function Layout() {
               <span>{t.footerSecure}</span>
               <span>·</span>
               <span>{t.footerReturns}</span>
+              <span>·</span>
+              <Link to="/policies" className="hover:text-background transition-colors">{t.navPolicies}</Link>
             </div>
           </div>
         </div>

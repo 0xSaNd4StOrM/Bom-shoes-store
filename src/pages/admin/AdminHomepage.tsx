@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { supabase, Testimonial } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useT } from '@/contexts/LanguageContext'
@@ -10,7 +11,7 @@ import { toast } from 'sonner'
 // plain UPDATE is always correct here, there's no insert-then-conflict case.
 const SITE_CONTENT_KEYS = [
   'hero', 'showcase', 'curated', 'limited_drop', 'trust_badges',
-  'newsletter', 'categories_strip', 'announcement', 'footer_links',
+  'newsletter', 'categories_strip', 'announcement', 'footer_links', 'policies',
 ] as const
 type SiteContentKey = typeof SITE_CONTENT_KEYS[number]
 
@@ -28,6 +29,7 @@ const TABS = [
   { key: 'categories_strip', labelKey: 'adminBrandBarTab' },
   { key: 'announcement', labelKey: 'adminAnnouncementTab' },
   { key: 'footer_links', labelKey: 'adminFooterLinksTab' },
+  { key: 'policies', labelKey: 'adminPoliciesTab' },
   { key: 'testimonials', labelKey: 'adminTestimonialsTab' },
 ] as const satisfies readonly { key: string; labelKey: TranslationKey }[]
 type TabKey = typeof TABS[number]['key']
@@ -116,6 +118,7 @@ export default function AdminHomepage() {
       {tab === 'categories_strip' && <BrandBarTab value={drafts.categories_strip || {}} setField={(f, v) => setField('categories_strip', f, v)} onSave={() => saveKey('categories_strip')} readOnly={!isAdmin} />}
       {tab === 'announcement' && <AnnouncementTab value={drafts.announcement || { lines: [] }} setField={(f, v) => setField('announcement', f, v)} onSave={() => saveKey('announcement')} readOnly={!isAdmin} />}
       {tab === 'footer_links' && <FooterLinksTab value={drafts.footer_links || { items: [] }} setField={(f, v) => setField('footer_links', f, v)} onSave={() => saveKey('footer_links')} readOnly={!isAdmin} />}
+      {tab === 'policies' && <PoliciesTab value={drafts.policies || {}} setField={(f, v) => setField('policies', f, v)} onSave={() => saveKey('policies')} readOnly={!isAdmin} />}
       {tab === 'testimonials' && <TestimonialsTab />}
     </div>
   )
@@ -557,6 +560,55 @@ function FooterLinksTab({ value, setField, onSave, readOnly }: { value: any; set
           ))}
           {items.length === 0 && <p className="text-sm text-muted-foreground">{t.adminNoLinks}</p>}
         </div>
+      </div>
+
+      <SaveBar onSave={onSave} readOnly={readOnly} />
+    </Card>
+  )
+}
+
+// ---------- Policies & Cancellations (markdown page) ----------
+
+function PoliciesTab({ value, setField, onSave, readOnly }: { value: any; setField: (f: string, v: any) => void; onSave: () => void; readOnly: boolean }) {
+  const t = useT()
+  const [preview, setPreview] = useState<'en' | 'ar' | null>(null)
+  const cls = 'w-full bg-transparent border border-border px-3 py-2 text-sm font-mono focus:border-foreground outline-none disabled:opacity-40'
+
+  return (
+    <Card>
+      <p className="text-sm text-muted-foreground">{t.adminPoliciesHint}</p>
+      <BilingualField label={t.adminFieldTitle} valueEn={value.title_en || ''} valueAr={value.title_ar || ''} onEnChange={v => setField('title_en', v)} onArChange={v => setField('title_ar', v)} disabled={readOnly} />
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminPoliciesBodyEn}</span>
+          <button type="button" onClick={() => setPreview(p => p === 'en' ? null : 'en')} className="text-xs underline cursor-pointer">
+            {preview === 'en' ? t.adminPoliciesEdit : t.adminPoliciesPreview}
+          </button>
+        </div>
+        {preview === 'en' ? (
+          <div className="prose-policies border border-border p-4 text-sm max-h-96 overflow-y-auto">
+            <ReactMarkdown>{value.body_md_en || ''}</ReactMarkdown>
+          </div>
+        ) : (
+          <textarea rows={14} value={value.body_md_en || ''} disabled={readOnly} onChange={e => setField('body_md_en', e.target.value)} className={cls} />
+        )}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminPoliciesBodyAr}</span>
+          <button type="button" onClick={() => setPreview(p => p === 'ar' ? null : 'ar')} className="text-xs underline cursor-pointer">
+            {preview === 'ar' ? t.adminPoliciesEdit : t.adminPoliciesPreview}
+          </button>
+        </div>
+        {preview === 'ar' ? (
+          <div dir="rtl" className="prose-policies border border-border p-4 text-sm max-h-96 overflow-y-auto">
+            <ReactMarkdown>{value.body_md_ar || ''}</ReactMarkdown>
+          </div>
+        ) : (
+          <textarea rows={14} dir="rtl" value={value.body_md_ar || ''} disabled={readOnly} onChange={e => setField('body_md_ar', e.target.value)} className={cls} />
+        )}
       </div>
 
       <SaveBar onSave={onSave} readOnly={readOnly} />

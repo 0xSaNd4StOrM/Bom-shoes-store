@@ -60,6 +60,8 @@ export default function AdminSettings() {
   const [uploadingBrandLogo, setUploadingBrandLogo] = useState<string | null>(null)
   const [checkoutConfig, setCheckoutConfig] = useState<CheckoutConfig>(DEFAULT_CHECKOUT_CONFIG)
   const [savingCheckout, setSavingCheckout] = useState(false)
+  const [brandsPageEnabled, setBrandsPageEnabled] = useState(true)
+  const [savingVisibility, setSavingVisibility] = useState(false)
   const [regions, setRegions] = useState<ShippingRegion[]>([])
   const [savingShipping, setSavingShipping] = useState(false)
   const t = useT()
@@ -76,10 +78,11 @@ export default function AdminSettings() {
     const { data: content } = await supabase
       .from('site_content')
       .select('key, value')
-      .in('key', ['whatsapp', 'contact', 'checkout_config', 'shipping'])
+      .in('key', ['whatsapp', 'contact', 'checkout_config', 'shipping', 'site_visibility'])
     for (const row of content || []) {
       if (row.key === 'whatsapp') setWhatsapp({ ...EMPTY_WHATSAPP, ...row.value })
       if (row.key === 'checkout_config') setCheckoutConfig({ ...DEFAULT_CHECKOUT_CONFIG, ...row.value })
+      if (row.key === 'site_visibility') setBrandsPageEnabled((row.value as { brands_page_enabled?: boolean })?.brands_page_enabled !== false)
       if (row.key === 'shipping') {
         const rs = (row.value as { regions?: ShippingRegion[] })?.regions
         setRegions(Array.isArray(rs) ? rs : [])
@@ -181,6 +184,19 @@ export default function AdminSettings() {
     setSavingCheckout(true)
     const { error } = await supabase.from('site_content').update({ value: next }).eq('key', 'checkout_config')
     setSavingCheckout(false)
+    if (error) { toast.error(error.message || t.adminSaveFailed); return }
+    toast.success(t.adminSaved)
+  }
+
+  // ----- Brands page visibility (nav link + /brands page) -----
+  async function handleToggleBrandsPage(enabled: boolean) {
+    setBrandsPageEnabled(enabled)
+    setSavingVisibility(true)
+    const { error } = await supabase
+      .from('site_content')
+      .update({ value: { brands_page_enabled: enabled } })
+      .eq('key', 'site_visibility')
+    setSavingVisibility(false)
     if (error) { toast.error(error.message || t.adminSaveFailed); return }
     toast.success(t.adminSaved)
   }
@@ -526,9 +542,21 @@ export default function AdminSettings() {
 
       {/* ----- Brands ----- */}
       <div className="border border-border bg-card p-6 space-y-4">
-        <div>
-          <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminBrands}</span>
-          <p className="text-[11px] text-muted-foreground mt-1.5">{t.adminBrandsHint}</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <span className="block text-xs tracking-widest uppercase text-muted-foreground">{t.adminBrands}</span>
+            <p className="text-[11px] text-muted-foreground mt-1.5">{t.adminBrandsHint}</p>
+          </div>
+          <label className="flex items-center gap-2 shrink-0 cursor-pointer">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t.adminShowBrandsPage}</span>
+            <input
+              type="checkbox"
+              checked={brandsPageEnabled}
+              disabled={savingVisibility}
+              onChange={e => handleToggleBrandsPage(e.target.checked)}
+              className="w-4 h-4 accent-foreground cursor-pointer"
+            />
+          </label>
         </div>
         <div className="space-y-2">
           {brands.map((b, i) => (

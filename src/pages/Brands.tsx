@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Navigate } from 'react-router-dom'
 import { useT } from '@/contexts/LanguageContext'
 import { useSeo } from '@/hooks/useSeo'
+import { supabase } from '@/lib/supabase'
 import { ArrowUpRight } from 'lucide-react'
 
 // Static for now -- BOM Store is a multi-brand retailer, but the
@@ -12,8 +14,27 @@ const BRANDS = ['Prada', 'Nike', 'Balenciaga', 'Adidas', 'Amiri', 'New Balance',
 
 export default function Brands() {
   const t = useT()
+  // The admin can hide this page entirely (site_content.site_visibility);
+  // Layout already hides the nav link, but this page is also reachable by a
+  // direct URL/bookmark, so it needs its own check.
+  const [hidden, setHidden] = useState(false)
+  const [checked, setChecked] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('site_content')
+      .select('value')
+      .eq('key', 'site_visibility')
+      .maybeSingle()
+      .then(({ data }) => {
+        setHidden((data?.value as { brands_page_enabled?: boolean } | undefined)?.brands_page_enabled === false)
+        setChecked(true)
+      }, () => setChecked(true))
+  }, [])
 
   useSeo({ title: `${t.navBrands} · ${t.brandName}`, description: t.brandsSubtitle })
+
+  if (checked && hidden) return <Navigate to="/" replace />
 
   return (
     <div className="px-6 lg:px-10 py-16 lg:py-24 bg-cream min-h-screen">

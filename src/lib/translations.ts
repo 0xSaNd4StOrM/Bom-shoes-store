@@ -20,6 +20,7 @@ export const translations = {
     navSandals: 'Sandals',
     navBrands: 'Brands',
     navSale: 'Sale',
+    navPolicies: 'Policies & Cancellations',
 
     // Account menu
     myAccount: 'My account',
@@ -577,6 +578,7 @@ export const translations = {
     adminRestoreGovernorates: 'Add all 27 governorates',
     adminBrands: 'Brands',
     adminBrandsHint: 'Add the brands you carry. Upload a logo (WebP with a transparent background looks best) to show it in the homepage brand bar instead of the name.',
+    adminShowBrandsPage: 'Show /brands page + nav link',
     adminBrandName: 'Brand name',
     adminAddBrand: 'Add brand',
     adminDeleteBrand: 'Delete brand',
@@ -634,6 +636,12 @@ export const translations = {
     adminNewsletterTab: 'Newsletter',
     adminAnnouncementTab: 'Announcement Bar',
     adminFooterLinksTab: 'Footer Links',
+    adminPoliciesTab: 'Policies',
+    adminPoliciesHint: 'Shown on the /policies page (linked in the footer). Written in Markdown: ## for a heading, - for a bullet, **text** for bold, blank lines between paragraphs.',
+    adminPoliciesBodyEn: 'Body (English, Markdown)',
+    adminPoliciesBodyAr: 'Body (Arabic, Markdown)',
+    adminPoliciesPreview: 'Preview',
+    adminPoliciesEdit: 'Edit',
     adminTestimonialsTab: 'Testimonials',
 
     // Admin — homepage fields
@@ -751,6 +759,7 @@ export const translations = {
     navSandals: 'صنادل',
     navBrands: 'الماركات',
     navSale: 'تخفيضات',
+    navPolicies: 'السياسات والإلغاء',
 
     // Account menu
     myAccount: 'حسابي',
@@ -1307,6 +1316,7 @@ export const translations = {
     adminRestoreGovernorates: 'إضافة كل المحافظات الـ27',
     adminBrands: 'الماركات',
     adminBrandsHint: 'أضف الماركات التي تبيعها. ارفع شعارًا (بصيغة WebP بخلفية شفافة يظهر بأفضل شكل) ليظهر في شريط الماركات بالصفحة الرئيسية بدلًا من الاسم.',
+    adminShowBrandsPage: 'إظهار صفحة الماركات ورابطها في القائمة',
     adminBrandName: 'اسم الماركة',
     adminAddBrand: 'إضافة ماركة',
     adminDeleteBrand: 'حذف الماركة',
@@ -1364,6 +1374,12 @@ export const translations = {
     adminNewsletterTab: 'النشرة البريدية',
     adminAnnouncementTab: 'شريط الإعلانات',
     adminFooterLinksTab: 'روابط التذييل',
+    adminPoliciesTab: 'السياسات',
+    adminPoliciesHint: 'تظهر في صفحة /policies (رابطها في أسفل الصفحة). تُكتب بصيغة Markdown: ## للعنوان، - للنقاط، **نص** للخط العريض، وسطر فارغ بين الفقرات.',
+    adminPoliciesBodyEn: 'المحتوى (إنجليزي، Markdown)',
+    adminPoliciesBodyAr: 'المحتوى (عربي، Markdown)',
+    adminPoliciesPreview: 'معاينة',
+    adminPoliciesEdit: 'تعديل',
     adminTestimonialsTab: 'آراء العملاء',
 
     // Admin — homepage fields

@@ -329,6 +329,25 @@ img { object-position: center; }
 /* RTL utility */
 [dir="rtl"] .flip-rtl { transform: scaleX(-1); }
 
+/* Minimal markdown-body styling (Policies page, admin-authored content) --
+   no typography plugin, just the handful of elements markdown can produce. */
+.prose-policies h1, .prose-policies h2, .prose-policies h3 {
+  font-family: 'Playfair Display', serif;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+}
+.prose-policies h1:first-child, .prose-policies h2:first-child, .prose-policies h3:first-child { margin-top: 0; }
+.prose-policies h2 { font-size: 1.5rem; }
+.prose-policies h3 { font-size: 1.15rem; }
+.prose-policies p { margin-bottom: 1em; }
+.prose-policies ul, .prose-policies ol { margin: 0 0 1em 1.25em; }
+[dir="rtl"] .prose-policies ul, [dir="rtl"] .prose-policies ol { margin: 0 1.25em 1em 0; }
+.prose-policies ul { list-style: disc; }
+.prose-policies ol { list-style: decimal; }
+.prose-policies li { margin-bottom: 0.35em; }
+.prose-policies strong { font-weight: 600; }
+.prose-policies a { text-decoration: underline; text-underline-offset: 2px; }
+
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
